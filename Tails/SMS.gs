@@ -47,16 +47,33 @@ function generateMessage(params) {
   if (!sheet.getRange(lastRow || 1, 1).getValue()) lastRow = findLastRowInColumnA(sheet);
   if (lastRow < 2) return "У стовпці A немає даних для обробки.";
 
+  const selectedColumns = (params && Array.isArray(params.selectedColumns))
+    ? params.selectedColumns
+        .map(n => Number(n))
+        .filter(n => Number.isInteger(n) && n >= 0)
+    : [];
+  const selectedSet = new Set(selectedColumns);
+
   const numRows = lastRow - 1;
   const dataRange = sheet.getRange(2, 1, numRows, Math.max(17, sheet.getLastColumn()));
   const dataValues = dataRange.getValues();
 
   let smsText = "Застосування на сьогодні:\n";
   for (let i = 0; i < dataValues.length; i++) {
-    const row = dataValues[i];
+    const srcRow = dataValues[i];
+    const row = selectedSet.size
+      ? srcRow.map((v, idx) => (selectedSet.has(idx) ? v : ''))
+      : srcRow;
+
     const nextRowHasA = (i + 1 < dataValues.length)
-      ? (dataValues[i + 1][0] && String(dataValues[i + 1][0]).trim() !== '')
+      ? (() => {
+          const n = selectedSet.size
+            ? (selectedSet.has(0) ? dataValues[i + 1][0] : '')
+            : dataValues[i + 1][0];
+          return n && String(n).trim() !== '';
+        })()
       : false;
+
     smsText += formatRow(row, nextRowHasA) + "\n";
   }
   return smsText;

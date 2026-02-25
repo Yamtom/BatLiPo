@@ -41,7 +41,6 @@ function autoBalanceDay() {
   const dataMonth = sh.getRange(2, CONFIG.dateStartColumn, lastRow-1, lastCol - CONFIG.dateStartColumn + 1).getValues();
   const dateRow = sh.getRange(CONFIG.dateRow, CONFIG.dateStartColumn, 1, lastCol - CONFIG.dateStartColumn + 1).getValues()[0].map(parseDate);
 
-  // Індекс колонки в масиві дат:
   const colIndex = dayCol - CONFIG.dateStartColumn; // 0-based
   const dayDate = parseDate(sh.getRange(CONFIG.dateRow, dayCol).getValue());
 

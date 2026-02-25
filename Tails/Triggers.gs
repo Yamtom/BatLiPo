@@ -18,7 +18,7 @@ function createDailyTrigger() {
   ScriptApp.newTrigger('colorCells')
     .timeBased()
     .everyDays(1)
-    .atHour(10)
+    .atHour(1)
     .create();
 }
 
@@ -44,4 +44,11 @@ function onOpen() {
 function onInstall(e) {
   onOpen(e);
   createDailyTrigger();
+}
+
+function applyFreeze() {
+  const sh = SpreadsheetApp.getActiveSheet();
+  sh.setFrozenRows(3);
+  sh.setFrozenColumns(2);
+  toast('Freeze застосовано: рядки 1-3, колонки A-B');
 }

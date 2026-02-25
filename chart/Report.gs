@@ -43,7 +43,6 @@ function updateReport() {
 
     if (now - d <= days30) {
        changes30++;
-       // Оператори
        if (idxWho !== -1) {
          const who = row[idxWho] || 'Не вказано';
          operatorStats[who] = (operatorStats[who] || 0) + 1;

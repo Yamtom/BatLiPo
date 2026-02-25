@@ -303,7 +303,11 @@ function getBoardHistory_(boardId) {
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const idxBoard = headers.indexOf('Борт');
-  // Інші індекси тут не потрібні
+  const idxStatus = headers.indexOf('Статус');
+  const idxDate = headers.indexOf('Дата зміни');
+  const idxWho = headers.indexOf('Хто');
+  const idxDesc = headers.indexOf('Опис');
+  const idxTime = headers.indexOf('Час');
   if (idxBoard === -1) return [];
 
   // Читається лише хвіст логу, щоб не завантажувати весь аркуш
@@ -318,11 +322,16 @@ function getBoardHistory_(boardId) {
   for (let i = data.length - 1; i >= 0; i--) {
     // Порівнюємо в однаковому форматі
     if (String(data[i][idxBoard] || '').trim() === searchId) {
-      // Запис додається в історію
-       history.push({
-        // поля історії
-       });
-       if (history.length >= 3) break;
+      const status = idxStatus !== -1 ? String(data[i][idxStatus] || '') : '';
+      const dateRaw = idxDate !== -1 ? data[i][idxDate] : (idxTime !== -1 ? data[i][idxTime] : '');
+      history.push({
+        date: dateRaw,
+        who: idxWho !== -1 ? String(data[i][idxWho] || '') : '',
+        status: status,
+        desc: idxDesc !== -1 ? String(data[i][idxDesc] || '') : '',
+        color: getStatusColor(status)
+      });
+      if (history.length >= 3) break;
     }
   }
   return history;

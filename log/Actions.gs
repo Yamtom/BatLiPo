@@ -26,7 +26,6 @@ function onEdit(e) {
     const row = rowStart + r;
     let needsDuration = false;
 
-    // Дата
     if (colStart <= CONFIG.COLS.DATE && (colStart + numCols - 1) >= CONFIG.COLS.DATE) {
       const cell = sh.getRange(row, CONFIG.COLS.DATE);
       const val = cell.getValue();
@@ -38,7 +37,6 @@ function onEdit(e) {
       }
     }
 
-    // Час
     if ((colStart <= CONFIG.COLS.TAKEOFF && (colStart + numCols - 1) >= CONFIG.COLS.TAKEOFF) ||
         (colStart <= CONFIG.COLS.LANDING && (colStart + numCols - 1) >= CONFIG.COLS.LANDING)) {
 
@@ -57,7 +55,6 @@ function onEdit(e) {
       needsDuration = true;
     }
 
-    // РЕБ / Цілісність
     if ((colStart <= CONFIG.COLS.EW_ACTION && (colStart + numCols - 1) >= CONFIG.COLS.EW_ACTION) ||
         (colStart <= CONFIG.COLS.INTEGRITY && (colStart + numCols - 1) >= CONFIG.COLS.INTEGRITY)) {
       needsDuration = true;
@@ -69,7 +66,6 @@ function onEdit(e) {
   }
 }
 
-/** Оновлення тривалості і ризику для одного рядка */
 /** Оновлення ризику для одного рядка (тривалість обчислюється лише для логіки) */
 function updateDurationAndRiskForRow_(sh, row) {
   const takeoff   = sh.getRange(row, CONFIG.COLS.TAKEOFF).getValue();
@@ -162,10 +158,9 @@ function recalcAllDurations() {
     const integrity = row[CONFIG.COLS.INTEGRITY - 1];
     const ew        = row[CONFIG.COLS.EW_ACTION - 1];
 
-    const ms = computeDurationMs(takeoffObj, landingObj);
-    const isRisk = calculateRiskFactor(data.integrity, data.ewAction, ms);
-
-    riskCol.push([riskVal]);
+    const ms = computeDurationMs(takeoff, landing);
+    const isRisk = calculateRiskFactor(integrity, ew, ms);
+    riskCol.push([isRisk]);
   }
 
   sh.getRange(startRow, CONFIG.COLS.RISK, numRows, 1).setValues(riskCol);
@@ -279,7 +274,15 @@ function runSliceWithFilters(params) {
     totalHits += hits;
 
     const durVal = row[CONFIG.COLS.DURATION - 1];
-    if (typeof durVal === 'number') totalDurationMs += durVal * 86400000;
+    if (typeof durVal === 'number' && durVal > 0) {
+      totalDurationMs += durVal * 86400000;
+    } else {
+      const ms = computeDurationMs(
+        row[CONFIG.COLS.TAKEOFF - 1],
+        row[CONFIG.COLS.LANDING - 1]
+      );
+      if (ms) totalDurationMs += ms;
+    }
 
     if (row[CONFIG.COLS.RISK - 1] == 1) riskCount++;
   }

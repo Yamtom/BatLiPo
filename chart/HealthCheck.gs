@@ -62,7 +62,6 @@ function archiveLostDrones() {
     for (let i = data.length - 1; i >= 1; i--) { // Рядок заголовка ігнорується
       const rowString = data[i].join(' ').toLowerCase();
       
-      // Критерій архівування
       if (rowString.includes('втрачений') || rowString.includes('lost') || rowString.includes('збито')) {
         // Додається мітка джерела
         archiveSheet.appendRow([new Date(), sName, ...data[i]]);

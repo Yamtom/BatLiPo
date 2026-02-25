@@ -1,8 +1,7 @@
 /** Оновлення кольорів і формул */
 
 // Оновлення формул підрахунку кольорів на одному листі
-function refreshColorCountsActiveSheet( ) {
-  const sheet = SpreadsheetApp.getActiveSheet();
+function refreshColorCountsActiveSheet(sheet = SpreadsheetApp.getActiveSheet()) {
   const range = sheet.getDataRange();
   // Усі формули на аркуші отримуються
   const formulas = range.getFormulas();
@@ -25,7 +24,7 @@ function refreshColorCountsActiveSheet( ) {
 function refreshAll() {
   try {
     // 1) Фарбування заголовків по всіх аркушах (сьогодні/минуле/майбутнє)
-    colorHeadersAll();
+    colorCells();
 
     // 2) Один прохід по всіх аркушах — оновлення формул підрахунку кольорів
     const ss = SpreadsheetApp.getActiveSpreadsheet();
