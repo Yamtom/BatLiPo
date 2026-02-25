@@ -26,8 +26,7 @@
           return;
         }
         
-        // --- ВИПРАВЛЕНО ТУТ ---
-        // Ми передаємо ID самих SELECT елементів, а не неіснуючих datalist
+        // Заповнюємо списки селектів
         fillSelect('status', data.statuses || [], 'value');
         fillSelect('changedBy', data.names || []);
 
@@ -50,8 +49,8 @@
     const selectEl = document.getElementById(id);
     if (!selectEl) return;
     
-    // Очищаємо, залишаючи перший option (placeholder), якщо він є
-    // або просто очищаємо все і додаємо placeholder наново
+    // Чистимо select, залишаючи перший option (placeholder), якщо він є
+    // або повне очищення з повторним додаванням placeholder
     selectEl.innerHTML = '<option value="" disabled selected>— Оберіть зі списку —</option>';
     
     (items || []).forEach(item => {
@@ -59,7 +58,7 @@
       if (!val) return;
       const opt = document.createElement('option');
       opt.value = val;
-      opt.textContent = val; // Для Select важливо задати textContent
+      opt.textContent = val; // Для Select має бути задано textContent
       selectEl.appendChild(opt);
     });
   }
@@ -82,7 +81,7 @@
       infoBox.style.borderLeftColor = '#FF9800';
     } else {
       const raw = String(meta.currentStatus || '');
-      // Беремо останній рядок статусу (якщо там історія через Enter)
+      // Беремо останній рядок статусу (якщо історія записана через Enter)
       const lines = raw.split(/\r?\n/).filter(l => l.trim() !== '');
       const lastStatus = lines.length ? lines[lines.length - 1] : 'Немає статусу';
       
@@ -193,14 +192,14 @@
       if (val) {
         google.script.run.addStatus(val, col);
         
-        // Додаємо в Select
+        // Елемент додається в Select
         const select = document.getElementById('status');
         const opt = document.createElement('option');
         opt.value = val;
         opt.textContent = val;
         select.appendChild(opt);
         
-        // Обираємо його
+        // Додається вибір нового елемента
         select.value = val;
         valEl.value = '';
       }
@@ -211,14 +210,14 @@
       if (val) {
         google.script.run.addName(val);
         
-        // Додаємо в Select
+        // Елемент додається в Select
         const select = document.getElementById('changedBy');
         const opt = document.createElement('option');
         opt.value = val;
         opt.textContent = val;
         select.appendChild(opt);
         
-        // Обираємо його
+        // Додається вибір нового елемента
         select.value = val;
         valEl.value = '';
       }

@@ -70,7 +70,7 @@ function onEdit(e) {
 }
 
 /** Оновлення тривалості і ризику для одного рядка */
-/** Оновлення ризику для одного рядка (тривалість рахуємо тільки для логіки) */
+/** Оновлення ризику для одного рядка (тривалість обчислюється лише для логіки) */
 function updateDurationAndRiskForRow_(sh, row) {
   const takeoff   = sh.getRange(row, CONFIG.COLS.TAKEOFF).getValue();
   const landing   = sh.getRange(row, CONFIG.COLS.LANDING).getValue();
@@ -79,7 +79,7 @@ function updateDurationAndRiskForRow_(sh, row) {
 
   const ms = computeDurationMs(takeoff, landing);
 
-  // Тривалість не записуємо в колонку G, тільки використовуємо в розрахунку ризику
+  // Тривалість у колонку G не пишемо; використовуємо лише для розрахунку ризику
   const isRisk = calculateRiskFactor(integrity, ew, ms);
   sh.getRange(row, CONFIG.COLS.RISK).setValue(isRisk);
 }
@@ -146,7 +146,7 @@ function recalcAllDurations() {
     return;
   }
 
-  // Дати нормалізуємо, щоб сортування і фільтри працювали
+  // Дати нормалізуються, щоб сортування і фільтри працювали
   recalcAllDates_(sh, startRow, numRows);
 
   const lastCol = Math.max(...Object.values(CONFIG.COLS));
@@ -212,7 +212,7 @@ function addFlight(data) {
     rowData[CONFIG.COLS.NOTES      - 1] = data.notes;
     rowData[CONFIG.COLS.RISK       - 1] = isRisk;
 
-    // шукаємо перший вільний рядок по колонці DATE (A)
+    // Перший вільний рядок шукається за колонкою DATE (A)
     const lastDataRow = getLastDataRowByColumn_(sh, CONFIG.COLS.DATE, CONFIG.DATA_START_ROW);
     const targetRow = Math.max(lastDataRow + 1, CONFIG.DATA_START_ROW);
 
@@ -239,7 +239,7 @@ function addFlight(data) {
   }
 }
 
-/** Зріз (як у тебе, тільки спирається на нормалізовану дату) */
+/** Зріз (спирається на нормалізовану дату) */
 function runSliceWithFilters(params) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(CONFIG.SHEET_DATA);
@@ -322,7 +322,7 @@ function sortByDateTime() {
   const lastRow = sh.getLastRow();
   if (lastRow < CONFIG.DATA_START_ROW) return;
 
-  // Нормалізуємо дати тільки по активному аркушу
+  // Нормалізуємо дати тільки на активному аркуші
   recalcAllDates_(sh, CONFIG.DATA_START_ROW, lastRow - CONFIG.DATA_START_ROW + 1);
 
   const range = sh.getRange(CONFIG.DATA_START_ROW, 1, lastRow - CONFIG.DATA_START_ROW + 1, sh.getLastColumn());

@@ -1,8 +1,6 @@
-/** ===========================
- *  Triggers & Menu
- *  =========================== */
+/** Тригери і меню */
 
-// Прибирає тригери для вказаних функцій (одна або масив)
+// Тригери для вказаних функцій видаляються (одна функція або масив)
 function clearTriggersByFns(fns) {
   const names = Array.isArray(fns) ? fns : [fns];
   const set = new Set(names);
@@ -13,7 +11,7 @@ function clearTriggersByFns(fns) {
 
 /**
  * ЄДИНИЙ щоденний тригер: щоночі фарбуємо заголовки по всіх листах (легко й швидко).
- * Якщо вже був інший — чистимо й ставимо заново.
+ * Якщо тригер уже є — видаляємо і створюємо заново.
  */
 function createDailyTrigger() {
   clearTriggersByFns(['colorCells']);
@@ -32,7 +30,7 @@ function onOpen() {
     .addItem('Оновити підрахунки (активний лист)', 'refreshColorCountsActiveSheet')
     .addItem('Відновити щоденний тригер (01:00)', 'createDailyTrigger')
     .addSeparator()
-    .addItem('Відкрити SMS панель', 'showSidebar')        // ⬅ додано
+    .addItem('Відкрити SMS панель', 'showSidebar')
     .addSeparator()
     .addItem('Застосувати Freeze (рядки 1–3, колонки A–B)', 'applyFreeze')
     .addToUi();

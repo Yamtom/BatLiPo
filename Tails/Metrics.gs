@@ -3,12 +3,12 @@
  *  Створює/оновлює аркуш "Metrics" з метриками по кожній людині (стовпець A).
  *  Розрахунок по поточному місяцю з рядка дат (CONFIG.dateRow) на активному аркуші.
  *  Параметри:
- *   - Вважаємо зміну будь-яку непорожню клітинку.
+ *   - Зміною рахуємо будь-яку непорожню клітинку.
  *   - Вихідні = суб/нед + свята з HOLIDAYS (якщо є).
- *   - Нічні коди можна підлаштувати у NIGHT_CODES.
+ *   - Нічні коди налаштовуються у NIGHT_CODES.
  *  =========================== */
 
-const NIGHT_CODES = ['н','рн','Н']; // підлаштуй під свої позначення
+const NIGHT_CODES = ['н','рн','Н']; // налаштовується під потрібні позначення
 
 function updateFairnessMetrics() {
   try {
@@ -69,7 +69,7 @@ function updateFairnessMetrics() {
 
         if (hasShift) {
           shifts++;
-          // нічні?
+          // Перевірка нічних кодів
           const code = String(cell).toLowerCase();
           if (NIGHT_CODES.some(nc => code.includes(nc))) nights++;
           if (isWeekend) weekends++;
@@ -84,7 +84,7 @@ function updateFairnessMetrics() {
       rowsOut.push([name, shifts, nights, weekends, maxStreak, '']);
     }
 
-    // Індекс дисбалансу: для простоти — глобально один рядок угорі
+    // Індекс дисбалансу: для простоти робимо один глобальний рядок угорі
     const mean = totals.length ? (totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
     const variance = totals.length ? (totals.reduce((s,x)=>s+Math.pow(x-mean,2),0)/totals.length) : 0;
     const stdev = Math.sqrt(variance);
@@ -92,7 +92,7 @@ function updateFairnessMetrics() {
     rowsOut.splice(1, 0, ['— Глобальні метрики —', 'Середнє', 'Стд. відхил.', 'Розкид (max-min)', '', '']);
     rowsOut.splice(2, 0, ['', mean, stdev, spread, '', '']);
 
-    // Вивід на аркуш "Metrics"
+    // Виведення на аркуш "Metrics"
     const ms = ss.getSheetByName('Metrics') || ss.insertSheet('Metrics');
     ms.clear();
     ms.getRange(1,1,rowsOut.length, rowsOut[0].length).setValues(rowsOut);

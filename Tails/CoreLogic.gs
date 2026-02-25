@@ -47,10 +47,10 @@ function colorHeadersForSheet(sheet) {
  * Підрахунок клітинок за кольором(ами).
  * - rangeA: A1 або Range (можна sheet!A1:B2)
  * - colorAddrs: одна адреса/масив адрес/прямий колір ("#ff0000" або "red")/Range
- * Додає:
- *  - перевірку пустих таргетів
- *  - підтримку посилань "Лист!A1"
- *  - підтримку прямих значень кольору
+ * Підтримка:
+ *  - перевірка пустих таргетів
+ *  - посилання "Лист!A1"
+ *  - прямі значення кольору
  */
 function countCellsByColor(rangeA, colorAddrs, dummy) {
   try {
@@ -75,25 +75,25 @@ function countCellsByColor(rangeA, colorAddrs, dummy) {
 
     const colors = new Set();
     for (const tgt of targets) {
-      // Прямий колір?
+      // Перевірка прямого кольору
       if (isColorLiteral(tgt)) {
         colors.add(String(tgt).trim().toLowerCase());
         continue;
       }
-      // Range-об’єкт?
+      // Перевірка об’єкта Range
       if (tgt && typeof tgt.getBackground === 'function') {
         colors.add(String(tgt.getBackground()).trim().toLowerCase());
         continue;
       }
-      // A1-адреса (sheet!A1 дозволено)
+      // Перевірка A1-адреси (sheet!A1 дозволено)
       if (typeof tgt === 'string') {
         try {
           const p = splitSheetA1(tgt);
-          const sh = ss.getSheetByName(p.sheetName) || dataSheet; // якщо не вказаний лист — використовуємо лист даних
+          const sh = ss.getSheetByName(p.sheetName) || dataSheet; // якщо лист не вказаний — беремо лист даних
           const col = sh.getRange(p.a1).getBackground();
           colors.add(String(col).trim().toLowerCase());
         } catch (_) {
-          // пропустити невалідні адреси
+          // Невалідні адреси пропускаються
         }
       }
     }
@@ -121,7 +121,7 @@ function splitSheetA1(ref) {
   if (bang === -1) {
     return { sheetName: SpreadsheetApp.getActiveSheet().getName(), a1: s };
   }
-  // підтримка назв листів у лапках 'My Sheet'!A1
+  // Підтримуються назви листів у лапках 'My Sheet'!A1
   const sheetName = s.slice(0, bang).replace(/^'+|'+$/g, '');
   const a1 = s.slice(bang + 1);
   return { sheetName, a1 };

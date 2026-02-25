@@ -2,12 +2,12 @@
  *  Auto-balance for a day
  *  Працює по активному аркушу і активному СТОВПЦЮ (день).
  *  Алгоритм (мінімально інвазивний і зрозумілий):
- *   1) Користувач вводить КОД (що ставити) та КІЛЬКІСТЬ місць N.
- *   2) Скрипт рахує завантаження (змін у місяць) по кожній людині.
- *   3) Фільтрує недоступних (за бажанням можна розширити — тут лише порожні/доступні комірки).
- *   4) Обирає N кандидатів з найменшим навантаженням і заповнює ПУСТІ клітинки в активному дні.
+ *   1) Вводиться КОД (для встановлення) та КІЛЬКІСТЬ місць N.
+ *   2) Розраховується завантаження (змін у місяць) по кожній людині.
+ *   3) Фільтруються недоступні (за потреби логіка розширюється; тут враховано лише порожні/доступні комірки).
+ *   4) Обираються N кандидатів з найменшим навантаженням, після чого заповнюються ПУСТІ клітинки в активному дні.
  *   5) Уже заповнені клітинки не чіпає.
- *  Примітка: якщо треба враховувати сертифікації/ролі/заборони — додамо lookup з "Бібліотека".
+ *  Примітка: за потреби врахування сертифікацій/ролей/заборон може бути додано lookup з "Бібліотека".
  *  =========================== */
 
 function autoBalanceDay() {
@@ -16,7 +16,7 @@ function autoBalanceDay() {
   const lastCol = sh.getLastColumn();
   const lastRow = sh.getLastRow();
 
-  // Перевіряємо, що активна клітинка у межах дат
+  // Перевіряється, що активна клітинка у межах дат
   const active = sh.getActiveCell();
   if (!active) { ui.alert('Обери клітинку в колонці потрібного дня.'); return; }
   const dayCol = active.getColumn();
@@ -25,7 +25,7 @@ function autoBalanceDay() {
     return;
   }
 
-  // Запит коду і кількості
+  // Запитуються код і кількість
   const codeResp = ui.prompt('Код для розстановки', 'Введи код зміни (наприклад: р, ш, н, рн…)', ui.ButtonSet.OK_CANCEL);
   if (codeResp.getSelectedButton() !== ui.Button.OK) return;
   const CODE = (codeResp.getResponseText() || '').trim();
@@ -36,7 +36,7 @@ function autoBalanceDay() {
   const N = Math.max(0, Number(nResp.getResponseText() || '0'));
   if (!N) { ui.alert('N має бути > 0.'); return; }
 
-  // Зчитуємо людей (стовпець A, з 2-го рядка) та їхній місячний лоад
+  // Зчитуються люди (стовпець A, з 2-го рядка) та їхній місячний лоад
   const people = sh.getRange(2, 1, lastRow-1, 1).getValues().map(r => (r[0] || '').toString().trim());
   const dataMonth = sh.getRange(2, CONFIG.dateStartColumn, lastRow-1, lastCol - CONFIG.dateStartColumn + 1).getValues();
   const dateRow = sh.getRange(CONFIG.dateRow, CONFIG.dateStartColumn, 1, lastCol - CONFIG.dateStartColumn + 1).getValues()[0].map(parseDate);
@@ -67,10 +67,10 @@ function autoBalanceDay() {
   // Сортуємо за найменшим навантаженням (справедливість)
   candidates.sort((a,b) => a.shifts - b.shifts);
 
-  // Беремо перші N
+  // Обираються перші N
   const pick = candidates.slice(0, Math.min(N, candidates.length));
 
-  // Ставимо код у лист
+  // Код записується у лист
   pick.forEach(p => {
     sh.getRange(2 + p.i, dayCol).setValue(CODE);
   });

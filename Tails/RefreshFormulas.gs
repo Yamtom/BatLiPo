@@ -1,29 +1,27 @@
-/** ===========================
- *  Refresh: один вхід і все оновлено
- *  =========================== */
+/** Оновлення кольорів і формул */
 
-// Універсальний рефреш формул підрахунку кольорів для ОДНОГО листа
+// Оновлення формул підрахунку кольорів на одному листі
 function refreshColorCountsActiveSheet( ) {
   const sheet = SpreadsheetApp.getActiveSheet();
   const range = sheet.getDataRange();
-  // Отримуємо всі формули на аркуші
+  // Усі формули на аркуші отримуються
   const formulas = range.getFormulas();
   
-  // Проходимо по кожній клітинці
+  // Проходимося по кожній клітинці
   for (let i = 0; i < formulas.length; i++) {
     for (let j = 0; j < formulas[i].length; j++) {
-      // Якщо в клітинці є формула countCellsByColor, "перевстановлюємо" її
+      // Якщо є формула countCellsByColor — "перевстановлюємо" її
       if (formulas[i][j].toLowerCase().includes('countcellsbycolor')) {
         const cell = range.getCell(i + 1, j + 1);
         cell.setFormula(cell.getFormula());
       }
     }
   }
-  // Застосовуємо всі зміни
+  // Усі зміни застосовуються
   SpreadsheetApp.flush();
 }
 
-// Головний “один рефреш”: фарбує заголовки на ВСІХ листах і разом перераховує підрахунки
+// Повне оновлення: кольори заголовків і формули підрахунку
 function refreshAll() {
   try {
     // 1) Фарбування заголовків по всіх аркушах (сьогодні/минуле/майбутнє)
@@ -43,7 +41,7 @@ function refreshAll() {
   }
 }
 
-/** Внутрішня утиліта: оновлення формул за ключем matchStr на переданому листі */
+/** Службова функція: оновлює формули за ключем matchStr */
 function refreshCells(matchStr, fullRefresh = false, sheet = SpreadsheetApp.getActiveSheet(), useCache = true) {
   const lock = LockService.getScriptLock();
   lock.tryLock(500);

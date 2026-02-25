@@ -1,4 +1,4 @@
-// SettingsTools.gs (new file)
+// Утиліти для аркуша Settings
 function ensureSettingsSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName('Settings');
@@ -21,7 +21,7 @@ function ensureSettingsSheet() {
   sh.autoResizeColumns(1, 2);
   toast('Settings створено', 3);
 
-  // invalidate cached config/settings
+  // Кеш налаштувань скидається
   CacheService.getScriptCache().remove('settings:v2');
   reloadConfig();
 }

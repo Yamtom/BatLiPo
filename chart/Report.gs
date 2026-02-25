@@ -1,6 +1,6 @@
 function updateReport() {
   const sh = getOrCreateSheet(SHEET_REPORT);
-  sh.clearContents(); // Очищаємо дані, зберігаємо жирність та розміри
+  sh.clearContents(); // Чистимо дані, жирність та розміри лишаємо
 
   // 1. Загальна кількість
   const nemCount = safeCount(SHEET_NEMESIS, 2, 1);
@@ -50,8 +50,8 @@ function updateReport() {
        }
     }
 
-    // Статуси (за весь час або за 30 днів - зазвичай цікавить актуальний стан, 
-    // але в лозі це історія. Тут ми рахуємо частоту використання статусів за весь час)
+    // Статуси (за весь час або за 30 днів; зазвичай цікавить актуальний стан,
+    // але в лозі це історія. Тут рахується частота використання статусів за весь час)
     if (idxStatus !== -1) {
       const st = row[idxStatus];
       if (st) statusCounts[st] = (statusCounts[st] || 0) + 1;

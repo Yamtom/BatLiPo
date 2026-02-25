@@ -57,7 +57,7 @@ function getFormData() {
   const sheetName = sheet.getName();
   const numRows   = range.getNumRows();
 
-  // Отримуємо значення, але безпечно
+  // Значення отримується безпечно
   let cellValue = '';
   if (range.getValue() != null) {
       cellValue = String(range.getValue());
@@ -81,24 +81,21 @@ function getFormData() {
       .getRange(range.getRow(), 1, 1, sheet.getLastColumn())
       .getValues()[0];
 
-    // --- ПОЧАТОК ВИПРАВЛЕННЯ ---
+    // ID борта збираємо з рядка
     if (sheetName === SHEET_LASAR) {
-      // Примусово конвертуємо в String і обрізаємо пробіли (.trim())
-      // Використовуємо (|| '') щоб уникнути помилок на undefined/null
+      // Значення приводяться до рядка і зайві пробіли прибираються
       const s = String(rowValues[COL_LASAR_SERIES - 1] || '').trim();
       const n = String(rowValues[COL_LASAR_NUMBER - 1] || '').trim();
       
-      // Перевіряємо, що змінні не порожні (тепер "0" пройде перевірку)
+      // Якщо обидва значення є — збираємо борт
       if (s !== '' && n !== '') {
-        meta.boardId = `${s}.${n}`; // Використовуємо шаблонні рядки для надійності
+        meta.boardId = `${s}.${n}`;
       }
 
     } else if (sheetName === SHEET_NEMESIS) {
       const id = String(rowValues[COL_NEMESIS_ID - 1] || '').trim();
       meta.boardId = id;
     }
-    // --- КІНЕЦЬ ВИПРАВЛЕННЯ ---
-
     if (meta.boardId) {
       history = getBoardHistory_(meta.boardId);
     }
@@ -115,13 +112,12 @@ function getFormData() {
 
 
 /**
- * ВИПРАВЛЕНО: Функція тепер сама визначає активний діапазон,
- * не покладаючись на дані з форми, яких не вистачало.
+ * Записує дані з форми в активний діапазон.
  */
 function appendData(data) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getActiveSheet(); // Беремо поточний активний лист
+    const sheet = ss.getActiveSheet(); // Працюємо з поточним листом
     const sheetName = sheet.getName();
 
     // 1. Валідація листа
@@ -137,11 +133,11 @@ function appendData(data) {
     const statusLine = `Статус: ${data.status}, Дата: ${data.changeDate}, Хто: ${data.changedBy}`;
     const fullText = data.description ? `${statusLine}, Опис: ${data.description}` : statusLine;
 
-    // 3. Оновлення значень (зберігаємо історію в клітинці)
+    // 3. Оновлення значень (історія зберігається в клітинці)
     const currentValues = range.getValues();
     const newValues = currentValues.map(r => {
       const prev = String(r[0] || '').trim();
-      // Додаємо новий запис з нового рядка
+      // Новий запис додається з нового рядка
       return [prev ? `${prev}\n${fullText}` : fullText];
     });
     range.setValues(newValues);
@@ -172,7 +168,7 @@ function logChange(data, sourceSheetName, sourceRowValues) {
     const colMap = ensureColumns_(sheet, headersList);
     const email = Session.getActiveUser().getEmail();
 
-    // Визначення ID
+    // Визначається ID
     let boardId = 'Невизначено';
     if (sourceSheetName === SHEET_NEMESIS && sourceRowValues) {
       boardId = sourceRowValues[COL_NEMESIS_ID - 1]; 
@@ -182,7 +178,7 @@ function logChange(data, sourceSheetName, sourceRowValues) {
       boardId = `${series}.${number}`;
     }
 
-    // Підготовка рядка
+    // Готуємо рядок
     const lastColIndex = sheet.getLastColumn(); 
     const rowArr = new Array(lastColIndex).fill('');
 
@@ -271,20 +267,20 @@ function colorCells(range, status, alsoCoreBlock = true) {
 
     const sh = range.getSheet();
     const r = range.getRow();
-    const numRows = range.getNumRows(); // Підтримка масового редагування
+    const numRows = range.getNumRows(); // Підтримуємо масове редагування
 
-    // Фарбуємо блок зліва (Series/Number або ID)
+    // Блок зліва (Series/Number або ID) фарбується
     const startCol = Math.max(1, range.getColumn() - 3);
     const width = 4;
     
-    // Створюємо матрицю кольорів
+    // Створюється матриця кольорів
     const colorsMatrix = [];
     const rowColors = new Array(width).fill(color);
     for(let i=0; i<numRows; i++) colorsMatrix.push(rowColors);
     
     sh.getRange(r, startCol, numRows, width).setBackgrounds(colorsMatrix);
 
-    // Фарбуємо фіксований блок B-E (якщо треба)
+    // Фарбується фіксований блок B-E (за потреби)
     if (alsoCoreBlock) {
        const coreWidth = 4; // B, C, D, E
        const coreMatrix = [];
@@ -307,25 +303,24 @@ function getBoardHistory_(boardId) {
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const idxBoard = headers.indexOf('Борт');
-  // ... інші індекси ...
+  // Інші індекси тут не потрібні
   if (idxBoard === -1) return [];
 
-  // Збільшіть ліміт, якщо бортів багато. 
-  // Якщо 9506 - це старий запис, 1000 рядків може не вистачити.
-  const rowsToRead = Math.min(lastRow - 1, 3000); // Збільшено до 3000
+  // Читається лише хвіст логу, щоб не завантажувати весь аркуш
+  const rowsToRead = Math.min(lastRow - 1, 3000);
   const startRow = Math.max(2, lastRow - rowsToRead + 1);
   const data = sheet.getRange(startRow, 1, rowsToRead, sheet.getLastColumn()).getValues();
 
   const history = [];
-  // При порівнянні теж робимо trim(), щоб уникнути проблем із пробілами
+  // ID нормалізується перед порівнянням
   const searchId = String(boardId).trim();
 
   for (let i = data.length - 1; i >= 0; i--) {
-    // Жорстке приведення до String і trim перед порівнянням
+    // Порівнюємо в однаковому форматі
     if (String(data[i][idxBoard] || '').trim() === searchId) {
-       // ... ваш код додавання в history ...
+      // Запис додається в історію
        history.push({
-        // ...
+        // поля історії
        });
        if (history.length >= 3) break;
     }

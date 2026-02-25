@@ -11,7 +11,7 @@ function onOpen() {
     .addItem('🧹 Видалити порожні рядки', 'removeEmptyRows')
     .addToUi();
 
-  // Автопереход до останнього вільного рядка по колонці A
+  // Автоперехід до останнього вільного рядка по колонці A
   goToLastRow();
 }
 
@@ -64,7 +64,7 @@ function showQuickEntry() {
                      'Швидке введення даних');
 }
 
-/** Видалення порожніх рядків (як було у тебе) */
+/** Видалення порожніх рядків */
 function removeEmptyRows() {
   const sh = SpreadsheetApp.getActiveSheet();
   if (sh.getName() !== CONFIG.SHEET_DATA) return;

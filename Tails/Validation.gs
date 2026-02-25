@@ -29,7 +29,7 @@ function applyShiftCodeValidationForSheet_(sheet) {
   const range = sheet.getRange(CONFIG.scheduleStartRow, CONFIG.dateStartColumn, numRows, numCols);
 
   // regex: строго повний матч, без пробілів на краях
-  // важливо: allowedCodes зберігай у lowercase в Settings, або навмисно хай uppercase стане "помилкою"
+  // Важливо: allowedCodes тримаємо у lowercase в Settings; uppercase вважаємо "помилкою"
   const inner = buildAllowedRegexInner_(CONFIG.allowedCodes);
   const fullRegex = `^(?:${inner})$`;
 
@@ -51,7 +51,7 @@ function applyShiftCodeValidationForSheet_(sheet) {
     .setRanges([range])
     .build();
 
-  // Додаємо rule (не чіпаючи інші)
+  // Rule додається без зміни інших
   const rules = sheet.getConditionalFormatRules() || [];
   rules.push(rule);
   sheet.setConditionalFormatRules(rules);
@@ -60,7 +60,7 @@ function applyShiftCodeValidationForSheet_(sheet) {
 // allowedCodes -> regex alternatives, з екрануванням
 function buildAllowedRegexInner_(codes) {
   const uniq = Array.from(new Set((codes || []).map(x => String(x).trim().toLowerCase()).filter(Boolean)));
-  // Екрануємо спецсимволи regex, але лишаємо кирилицю як є
+  // Екрануємо спецсимволи regex; кирилицю лишаємо без змін
   return uniq.map(escapeRegex_).join('|') || escapeRegex_('п+ш');
 }
 

@@ -23,7 +23,7 @@ function logError(fnName, error) {
  */
 function ensureColumns_(sheet, names) {
   const lastCol = Math.max(1, sheet.getLastColumn());
-  // Читаємо тільки перший рядок
+  // Читається тільки перший рядок
   let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   let updated = false;
 
@@ -38,6 +38,6 @@ function ensureColumns_(sheet, names) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  // Повертаємо мапу { "Статус": 1, "Дата": 2 ... }
+  // Повертається мапа { "Статус": 1, "Дата": 2 ... }
   return headers.reduce((m, name, i) => { m[name] = i + 1; return m; }, {});
 }

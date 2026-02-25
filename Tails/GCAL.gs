@@ -1,15 +1,15 @@
-/***** CONFIG & CONSTANTS *****/
+/** Налаштування і константи */
 const CFG_SHEET = 'GCAL_CONFIG';
 const NOTE_PREFIX = '[GCAL]';
 const BASE_EPOCH = new Date('1899-12-30T00:00:00Z'); // серійні дати
 const TZ = Session.getScriptTimeZone();
 const STATE_KEY = 'gcal_sync_cursor_v2';
 const LIMITS = {
-  MAX_MS: 5.5 * 600 * 1000,  // зупиняємось за ~5,5 хв до тайм-ауту
-  CACHE_TTL_SEC: 30 * 60    // кешуємо події на 30 хв
+  MAX_MS: 5.5 * 600 * 1000,  // виконання зупиняється за ~5,5 хв до тайм-ауту
+  CACHE_TTL_SEC: 30 * 60    // події кешуються на 30 хв
 };
 
-/***** AUTO: оновлення при редагуванні *****/
+/** Автооновлення при редагуванні */
 function onEdit(e) {
   try {
     if (!e || !e.range) return;
@@ -20,7 +20,7 @@ function onEdit(e) {
     // Якщо є список дозволених колонок — перевіряємо
     if (cfg.dateColumns.length && !cfg.dateColumns.includes(e.range.getColumn())) return;
 
-    // Беремо саме одне значення (першу клітинку виділення)
+    // Беремо одне значення (першу клітинку виділення)
     const v = e.range.getValue();
     const dt = coerceToDate(v);
     if (!dt) return;
@@ -34,7 +34,7 @@ function onEdit(e) {
   } catch (_) {}
 }
 
-/***** MANUAL / TIME-DRIVEN: масовий обхід усіх аркушів *****/
+/** Ручний або плановий обхід усіх аркушів */
 function syncAllChunked() {
   const t0 = Date.now();
   const cfg = readConfig();
@@ -48,10 +48,10 @@ function syncAllChunked() {
   const props = PropertiesService.getScriptProperties();
   let state = JSON.parse(props.getProperty(STATE_KEY) || '{}');
   let si = Number.isInteger(state.si) ? state.si : 0; // індекс аркуша
-  let r0 = Number.isInteger(state.r0) ? state.r0 : 1; // наступний рядок
+  let r0 = Number.isInteger(state.r0) ? state.r0 : 1; // номер наступного рядка
 
   const cache = CacheService.getScriptCache();
-  const dayMemo = new Map(); // in-memory для цього запуску
+  const dayMemo = new Map(); // in-memory кеш для цього запуску
 
   for (; si < sheets.length; si++) {
     const sh = sheets[si];
@@ -62,7 +62,7 @@ function syncAllChunked() {
     const cols = cfg.dateColumns.length ? cfg.dateColumns.filter(c => c <= lastCol)
                                         : Array.from({length: lastCol}, (_,i)=>i+1);
 
-    // читаємо один раз
+    // Дані зчитуються один раз
     const range = sh.getRange(1, 1, lastRow, lastCol);
     const values = range.getValues();
     const notes = range.getNotes();
@@ -76,38 +76,38 @@ function syncAllChunked() {
 
         const dayKey = Utilities.formatDate(dt, TZ, 'yyyy-MM-dd');
         let noteText = dayMemo.has(dayKey) ? dayMemo.get(dayKey) : cache.get(dayKey);
-        if (noteText === null) { // кеш-міс
+        if (noteText === null) { // cache miss
           const events = cal.getEventsForDay(dt);
           noteText = buildNote(events, dt);
           cache.put(dayKey, noteText, LIMITS.CACHE_TTL_SEC);
           dayMemo.set(dayKey, noteText);
         } else if (noteText === null || noteText === undefined) {
-          // на всяк випадок — якщо cache повернув undefined (не має статися)
+          // Додаткова перевірка: якщо cache повернув undefined (очікувано не трапляється)
           noteText = '';
         }
 
         const cell = sh.getRange(r, c);
-        // мінімізуємо записи
+        // Мінімізуємо кількість записів
         const oldNote = notes[r-1][c-1] || '';
         const oursOld = oldNote.startsWith(NOTE_PREFIX) ? oldNote : '';
         const oursNew = noteText ? `${NOTE_PREFIX} ${noteText}` : '';
         if (oursOld !== oursNew) upsertNote(cell, noteText);
 
-        // контроль часу
+        // Контроль часу
         if (Date.now() - t0 > LIMITS.MAX_MS) {
           props.setProperty(STATE_KEY, JSON.stringify({si, r0: r}));
           return; // наступний запуск продовжить
         }
       }
     }
-    r0 = 1; // наступний аркуш з початку
+    r0 = 1; // Наступний аркуш починаємо з першого рядка
   }
 
-  // завершили все — чистимо стан
+  // Після завершення стан очищається
   PropertiesService.getScriptProperties().deleteProperty(STATE_KEY);
 }
 
-/***** CONFIG SHEET *****/
+/** Аркуш конфігурації */
 function ensureConfigSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(CFG_SHEET);
@@ -149,29 +149,29 @@ function isSheetAllowed(name, whitelist) {
   return !whitelist.length || whitelist.includes(name);
 }
 
-/***** NOTES *****/
+/** Робота з примітками */
 function upsertNote(range, plainNote) {
   if (plainNote && plainNote.length) {
     range.setNote(`${NOTE_PREFIX} ${plainNote}`);
   } else {
-    // Чистимо лише наші примітки
+    // Чистимо лише службові примітки з NOTE_PREFIX
     const old = range.getNote() || '';
     if (old.startsWith(NOTE_PREFIX)) range.setNote('');
   }
 }
 
-/***** DATE PARSING *****/
+/** Парсинг дати */
 function coerceToDate(v) {
-  // вже Date
+  // Значення вже є Date
   if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) {
     return new Date(v.getFullYear(), v.getMonth(), v.getDate());
   }
-  // серійне число
+  // Значення є серійним числом
   if (typeof v === 'number') {
     const d = new Date(BASE_EPOCH.getTime() + v * 86400000);
     if (!isNaN(d)) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
-  // рядок
+  // Значення є рядком
   if (typeof v === 'string') {
     const s = v.trim();
     const patterns = [
@@ -193,7 +193,7 @@ function coerceToDate(v) {
   return null;
 }
 
-/***** NOTE CONTENT *****/
+/** Текст примітки */
 function buildNote(events, day) {
   if (!events || !events.length) return '';
   const fmt = d => Utilities.formatDate(d, TZ, 'HH:mm');

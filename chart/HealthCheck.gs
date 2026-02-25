@@ -7,7 +7,7 @@ function runHealthCheck() {
   // 1. Перевірка Nemesis
   const nemSheet = getOrCreateSheet(SHEET_NEMESIS);
   const nemData = nemSheet.getDataRange().getValues();
-  // Припускаємо, що Nemesis має заголовок у рядку 1
+  // Приймається припущення, що Nemesis має заголовок у рядку 1
   for (let i = 1; i < nemData.length; i++) {
     const id = nemData[i][COL_NEMESIS_ID-1];
     if (!id || String(id).trim() === '') {
@@ -18,8 +18,8 @@ function runHealthCheck() {
   // 2. Перевірка Lasar
   const lasSheet = getOrCreateSheet(SHEET_LASAR);
   const lasData = lasSheet.getDataRange().getValues();
-  // Lasar часто має велику шапку, дані з рядка 12? Перевірте константи.
-  // Тут скануємо все, де є Серія
+  // Lasar часто має велику шапку; дані починаються з рядка 12 (константи мають бути перевірені).
+  // Скануємо всі рядки, де є Серія
   for (let i = 11; i < lasData.length; i++) { 
      const series = lasData[i][COL_LASAR_SERIES-1];
      const number = lasData[i][COL_LASAR_NUMBER-1];
@@ -59,12 +59,12 @@ function archiveLostDrones() {
 
     const data = sheet.getDataRange().getValues();
     // Йдемо з кінця, щоб видалення не ламало індекси
-    for (let i = data.length - 1; i >= 1; i--) { // ігноруємо 1 рядок заголовка
+    for (let i = data.length - 1; i >= 1; i--) { // Рядок заголовка ігнорується
       const rowString = data[i].join(' ').toLowerCase();
       
       // Критерій архівування
       if (rowString.includes('втрачений') || rowString.includes('lost') || rowString.includes('збито')) {
-        // Додаємо мітку, звідки прийшло
+        // Додається мітка джерела
         archiveSheet.appendRow([new Date(), sName, ...data[i]]);
         sheet.deleteRow(i + 1);
         totalMoved++;

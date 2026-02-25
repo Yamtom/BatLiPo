@@ -68,7 +68,7 @@
         <input type="time" id="landing">
       </div>
     </div>
-    <!-- НОВЕ: превʼю часу польоту -->
+    <!-- Показує розрахований час польоту -->
     <div id="durationPreview" style="margin-top: 4px; font-size: 13px; color: #4b5563;">
       Час польоту: —
     </div>
@@ -131,7 +131,7 @@
   <div id="msg" class="msg"></div>
 
   <script>
-    // Сьогоднішня дата
+    // Встановлення поточної дати
     document.getElementById('date').valueAsDate = new Date();
 
     // Smart defaults
@@ -172,7 +172,7 @@
       el.textContent = 'Час польоту: ' + label;
     }
 
-    // Вішємо оновлення превʼю на зміну часу
+    // Оновлення превʼю прив’язується до зміни часу
     document.getElementById('takeoff').addEventListener('input', updateDurationPreview);
     document.getElementById('landing').addEventListener('input', updateDurationPreview);
 
@@ -197,7 +197,7 @@
         notes:      document.getElementById('notes').value.trim()
       };
 
-      // Валідація обовʼязкових
+      // Валідація обовʼязкових полів
       var missing = [];
       if (!data.dateISO)   missing.push('Дата');
       if (!data.pilot)     missing.push('Пілот');
@@ -224,11 +224,11 @@
           btn.textContent = '💾 Зберегти';
           showMsg('✅ Успішно додано. Рядок ' + res.flight_id, true);
 
-          // чистимо тільки змінні частини
+          // Чистимо тільки змінні поля
           document.getElementById('hitCount').value = '';
           document.getElementById('targetType').value = '';
           document.getElementById('notes').value = '';
-          // дату/екіпаж/борт/район залишаємо
+          // Дата/екіпаж/борт/район залишаються без змін
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
