@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: sans-serif; padding: 15px; color: #333; }
+    label { display: block; margin-top: 12px; font-size: 0.9em; font-weight: bold; }
+    input, select { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; font-size:14px; }
+    button { width: 100%; padding: 12px; margin-top: 20px; background-color: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size:15px; font-weight:bold; }
+    button:hover { background-color: #45a049; }
+    .preset-btn { background: #f0f0f0; color: #333; font-size: 12px; padding: 6px 12px; margin-top:5px; margin-right:5px; border-radius:15px; width:auto; display:inline-block; font-weight:normal; }
+  </style>
+</head>
+<body>
+  <? var PREF = PREFILL || { pilots: [], navigators: [], boards: [] }; ?>
+  <? const today = new Date().toISOString().slice(0,10); ?>
+  
+  <div style="display:flex; gap:10px;">
+    <div style="flex:1">
+      <label>З</label>
+      <input type="date" id="start" value="<?= today ?>">
+    </div>
+    <div style="flex:1">
+      <label>По</label>
+      <input type="date" id="end" value="<?= today ?>">
+    </div>
+  </div>
+  
+  <div>
+    <button type="button" class="preset-btn" onclick="setPreset(7)">Тиждень</button>
+    <button type="button" class="preset-btn" onclick="setPreset(30)">Місяць</button>
+  </div>
+
+  <label>Фільтри (опційно)</label>
+  <select id="pilot">
+    <option value="">— Всі пілоти —</option>
+    <? PREF.pilots.forEach(function(p){ ?><option><?= p ?></option><? }); ?>
+  </select>
+
+  <select id="navigator" style="margin-top: 8px;">
+    <option value="">— Всі штурмани —</option>
+    <? PREF.navigators.forEach(function(n){ ?><option><?= n ?></option><? }); ?>
+  </select>
+
+  <select id="board" style="margin-top: 8px;">
+    <option value="">— Всі борти —</option>
+    <? PREF.boards.forEach(function(b){ ?><option><?= b ?></option><? }); ?>
+  </select>
+
+  <button onclick="runSlice()">Сформувати Звіт</button>
+  <div id="status" style="margin-top:15px; font-size:0.9em; text-align:center;"></div>
+
+  <script>
+    function setPreset(days) {
+      var end = new Date();
+      var start = new Date();
+      start.setDate(end.getDate() - days);
+      document.getElementById('end').valueAsDate = end;
+      document.getElementById('start').valueAsDate = start;
+    }
+
+    function runSlice() {
+      var btn = document.querySelector('button[onclick="runSlice()"]');
+      var status = document.getElementById('status');
+      
+      var params = {
+        startISO: document.getElementById('start').value,
+        endISO:   document.getElementById('end').value,
+        pilot:    document.getElementById('pilot').value,
+        navigator:document.getElementById('navigator').value,
+        board:    document.getElementById('board').value
+      };
+
+      btn.disabled = true;
+      btn.textContent = 'Обробка...';
+      status.textContent = '';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = 'Сформувати Звіт';
+          status.style.color = 'green';
+          status.innerHTML = '✅ <b>Готово</b><br>Рядків: ' + res.rows + '<br>Аркуш: <u>' + res.sheet + '</u>';
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Сформувати Звіт';
+          status.style.color = 'red';
+          status.textContent = 'Помилка: ' + (err && err.message ? err.message : err);
+        })
+        .runSliceWithFilters(params);
+    }
+  </script>
+</body>
+</html>

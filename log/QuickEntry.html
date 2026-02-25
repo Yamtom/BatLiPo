@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 12px; background: #f3f4f6; color: #1f2937; }
+    .section { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 12px; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .row > div { flex: 1; min-width: 0; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 6px; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fff; }
+    input:focus, select:focus { outline: 2px solid #3b82f6; border-color: #3b82f6; }
+    textarea { resize: vertical; min-height: 60px; }
+
+    button { width: 100%; padding: 16px; background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
+    button:active { transform: translateY(1px); }
+    button:disabled { background: #9ca3af; box-shadow: none; }
+
+    .msg { margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; text-align: center; }
+    .success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  </style>
+</head>
+<body>
+  <? var PREF = PREFILL || { pilots: [], navigators: [], boards: [], ammoTypes: [], defaults: {} }; ?>
+
+  <div class="section">
+    <div class="row">
+      <div>
+        <label>Дата *</label>
+        <input type="date" id="date">
+      </div>
+      <div>
+        <label>Борт *</label>
+        <input type="text" id="board" list="boardList" placeholder="Номер..." autocomplete="off">
+        <datalist id="boardList">
+          <? PREF.boards.forEach(function(x){ ?><option value="<?= x ?>"><? }); ?>
+        </datalist>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Пілот *</label>
+        <select id="pilot">
+          <option value="">— Оберіть —</option>
+          <? PREF.pilots.forEach(function(x){ ?><option><?= x ?></option><? }); ?>
+        </select>
+      </div>
+      <div>
+        <label>Штурман *</label>
+        <select id="navigator">
+          <option value="">— Оберіть —</option>
+          <? PREF.navigators.forEach(function(x){ ?><option><?= x ?></option><? }); ?>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="row">
+      <div>
+        <label>Час зльоту *</label>
+        <input type="time" id="takeoff">
+      </div>
+      <div>
+        <label>Час посадки *</label>
+        <input type="time" id="landing">
+      </div>
+    </div>
+    <!-- НОВЕ: превʼю часу польоту -->
+    <div id="durationPreview" style="margin-top: 4px; font-size: 13px; color: #4b5563;">
+      Час польоту: —
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="row">
+      <div style="flex:0.5; display:flex; align-items:center; gap:6px; margin-top:8px;">
+        <input type="checkbox" id="ewAction">
+        <label for="ewAction" style="margin:0;">РЕБ *</label>
+      </div>
+      <div>
+        <label>Район *</label>
+        <input type="text" id="area" placeholder="Напр. Сектор 4">
+      </div>
+    </div>
+    
+    <div class="row">
+      <div style="flex: 0.6">
+        <label>Уражено</label>
+        <input type="number" id="hitCount" min="0" placeholder="0">
+      </div>
+      <div>
+        <label>Тип цілі</label>
+        <input type="text" id="targetType" placeholder="Танк...">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>БК (зовнішні, до 2 типів) *</label>
+        <input type="text" id="ammoOuter" list="ammoList" placeholder="БК зовнішні">
+      </div>
+      <div>
+        <label>БК (внутрішні, до 2 типів)</label>
+        <input type="text" id="ammoInner" list="ammoList" placeholder="БК внутрішні">
+      </div>
+    </div>
+    <datalist id="ammoList">
+      <? PREF.ammoTypes.forEach(function(x){ ?><option value="<?= x ?>"><? }); ?>
+    </datalist>
+
+    <div class="row">
+      <div>
+        <label>Стан борту *</label>
+        <select id="integrity">
+          <option value="">— Оберіть —</option>
+          <option value="Цілий">Цілий</option>
+          <option value="Пошкоджений">Пошкоджений</option>
+          <option value="Втрачений">Втрачений</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Примітки</label>
+    <textarea id="notes" placeholder="Особливості місії..."></textarea>
+  </div>
+
+  <button id="submitBtn" onclick="submitForm()">💾 Зберегти</button>
+  <div id="msg" class="msg"></div>
+
+  <script>
+    // Сьогоднішня дата
+    document.getElementById('date').valueAsDate = new Date();
+
+    // Smart defaults
+    var defaults = PREF.defaults || {};
+    if (defaults.pilot)     document.getElementById('pilot').value     = defaults.pilot;
+    if (defaults.navigator) document.getElementById('navigator').value = defaults.navigator;
+    if (defaults.board)     document.getElementById('board').value     = defaults.board;
+    if (defaults.area)      document.getElementById('area').value      = defaults.area;
+
+    function showMsg(text, isSuccess) {
+      var el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (isSuccess ? 'success' : 'error');
+      el.style.display = 'block';
+    }
+
+
+    function updateDurationPreview() {
+      var tTakeoff = document.getElementById('takeoff').value;
+      var tLanding = document.getElementById('landing').value;
+      var el = document.getElementById('durationPreview');
+
+      var mStart = parseTimeToMinutes(tTakeoff);
+      var mEnd   = parseTimeToMinutes(tLanding);
+
+      if (mStart == null || mEnd == null) {
+        el.textContent = 'Час польоту: —';
+        return;
+      }
+
+      var diff = mEnd - mStart;
+      if (diff < 0) diff += 24 * 60; // перехід через добу
+
+      var h = Math.floor(diff / 60);
+      var m = diff % 60;
+
+      var label = h > 0 ? (h + ' год ' + m + ' хв') : (m + ' хв');
+      el.textContent = 'Час польоту: ' + label;
+    }
+
+    // Вішємо оновлення превʼю на зміну часу
+    document.getElementById('takeoff').addEventListener('input', updateDurationPreview);
+    document.getElementById('landing').addEventListener('input', updateDurationPreview);
+
+    function submitForm() {
+      var btn = document.getElementById('submitBtn');
+      var msg = document.getElementById('msg');
+
+      var data = {
+        dateISO:    document.getElementById('date').value,
+        board:      document.getElementById('board').value.trim(),
+        pilot:      document.getElementById('pilot').value.trim(),
+        navigator:  document.getElementById('navigator').value.trim(),
+        takeoffISO: document.getElementById('takeoff').value,
+        landingISO: document.getElementById('landing').value,
+        ewAction:   document.getElementById('ewAction').checked,
+        area:       document.getElementById('area').value.trim(),
+        hitCount:   document.getElementById('hitCount').value,
+        targetType: document.getElementById('targetType').value.trim(),
+        ammoOuter:  document.getElementById('ammoOuter').value.trim(),
+        ammoInner:  document.getElementById('ammoInner').value.trim(),
+        integrity:  document.getElementById('integrity').value.trim(),
+        notes:      document.getElementById('notes').value.trim()
+      };
+
+      // Валідація обовʼязкових
+      var missing = [];
+      if (!data.dateISO)   missing.push('Дата');
+      if (!data.pilot)     missing.push('Пілот');
+      if (!data.navigator) missing.push('Штурман');
+      if (!data.board)     missing.push('Борт');
+      if (!data.takeoffISO)missing.push('Час зльоту');
+      if (!data.landingISO)missing.push('Час посадки');
+      if (!data.area)      missing.push('Район');
+      if (!data.integrity) missing.push('Стан борту');
+      if (!data.ammoOuter && !data.ammoInner) missing.push('БК (зовнішні або внутрішні)');
+
+      if (missing.length > 0) {
+        showMsg('Заповніть обовʼязкові поля: ' + missing.join(', '), false);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Зберігаю...';
+      msg.style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = '💾 Зберегти';
+          showMsg('✅ Успішно додано. Рядок ' + res.flight_id, true);
+
+          // чистимо тільки змінні частини
+          document.getElementById('hitCount').value = '';
+          document.getElementById('targetType').value = '';
+          document.getElementById('notes').value = '';
+          // дату/екіпаж/борт/район залишаємо
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = '💾 Зберегти';
+          showMsg('Помилка: ' + (err && err.message ? err.message : err), false);
+        })
+        .addFlight(data);
+    }
+
+    function parseTimeToMinutes(str) {
+      if (!str) return null;
+      var parts = str.split(':');
+      if (parts.length < 2) return null;
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      if (isNaN(h) || isNaN(m)) return null;
+      return h * 60 + m;
+    }
+
+  </script>
+</body>
+</html>

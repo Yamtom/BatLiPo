@@ -1,0 +1,249 @@
+<script>
+  let isSubmitting = false;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. Дата
+    const dateInput = document.getElementById('changeDate');
+    if (dateInput && !dateInput.value) {
+      const now = new Date();
+      // Корекція таймзони, щоб не отримати вчорашній день
+      const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+      dateInput.value = local.toISOString().slice(0, 10);
+    }
+
+    // 2. Ініціалізація кнопки
+    updateSubmitAvailability();
+
+    // 3. Завантаження даних
+    loadAllData();
+  });
+
+  function loadAllData() {
+    google.script.run
+      .withSuccessHandler(data => {
+        if (!data) {
+          document.getElementById('boardInfo').innerHTML = 'Помилка завантаження даних';
+          return;
+        }
+        
+        // --- ВИПРАВЛЕНО ТУТ ---
+        // Ми передаємо ID самих SELECT елементів, а не неіснуючих datalist
+        fillSelect('status', data.statuses || [], 'value');
+        fillSelect('changedBy', data.names || []);
+
+        renderBoardInfo(data.meta || null);
+
+        const meta = data.meta || { isMassEdit: false };
+        renderHistory(data.history || [], meta.isMassEdit);
+
+        updateSubmitAvailability();
+      })
+      .withFailureHandler(err => {
+        const box = document.getElementById('boardInfo');
+        if (box) box.innerHTML = `<strong style="color:red">Помилка: ${(err && err.message) || err}</strong>`;
+      })
+      .getFormData();
+  }
+
+  // Функція заповнення SELECT
+  function fillSelect(id, items, key = null) {
+    const selectEl = document.getElementById(id);
+    if (!selectEl) return;
+    
+    // Очищаємо, залишаючи перший option (placeholder), якщо він є
+    // або просто очищаємо все і додаємо placeholder наново
+    selectEl.innerHTML = '<option value="" disabled selected>— Оберіть зі списку —</option>';
+    
+    (items || []).forEach(item => {
+      const val = key ? item[key] : item;
+      if (!val) return;
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val; // Для Select важливо задати textContent
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function renderBoardInfo(meta) {
+    const infoBox = document.getElementById('boardInfo');
+    if (!infoBox) return;
+
+    if (!meta) {
+      infoBox.innerHTML = 'Не вдалося визначити борт.';
+      infoBox.style.borderLeftColor = '#f44336';
+      return;
+    }
+
+    if (meta.isMassEdit) {
+      infoBox.innerHTML = `
+        <strong style="color:#FF9800;">Масове редагування</strong>
+        <span>Вибрано об'єктів: <b>${meta.count}</b></span>
+      `;
+      infoBox.style.borderLeftColor = '#FF9800';
+    } else {
+      const raw = String(meta.currentStatus || '');
+      // Беремо останній рядок статусу (якщо там історія через Enter)
+      const lines = raw.split(/\r?\n/).filter(l => l.trim() !== '');
+      const lastStatus = lines.length ? lines[lines.length - 1] : 'Немає статусу';
+      
+      infoBox.innerHTML = `
+        <strong>Борт: ${meta.boardId || 'Невизначено'}</strong>
+        <span>${meta.sheetName}, Рядок ${meta.row}</span>
+        <div style="margin-top:4px;">Поточний: <b>${lastStatus}</b></div>
+      `;
+      infoBox.style.borderLeftColor = '#2196F3';
+    }
+  }
+
+  function renderHistory(history, isMassEdit) {
+    const container = document.getElementById('historySection');
+    const list = document.getElementById('historyList');
+    if (!container || !list) return;
+
+    if (isMassEdit || !history || !history.length) {
+      container.style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = '';
+    history.forEach(h => {
+      const div = document.createElement('div');
+      div.className = 'history-item';
+      if (h.color) div.style.borderLeftColor = h.color;
+
+      div.innerHTML = `
+        <div class="history-header">
+          <span>${formatDate(h.date)}</span>
+          <span>${h.who || ''}</span>
+        </div>
+        <div class="history-status" style="color:${h.color || 'inherit'}">${h.status || ''}</div>
+        <div class="history-desc">${h.desc || ''}</div>
+      `;
+      list.appendChild(div);
+    });
+    container.style.display = 'block';
+  }
+
+  // --- ВАЛІДАЦІЯ ---
+
+  function validateForm() {
+    const s = document.getElementById('status').value;
+    const d = document.getElementById('changeDate').value;
+    const w = document.getElementById('changedBy').value;
+    return s && d && w;
+  }
+
+  function updateSubmitAvailability() {
+    const btn = document.getElementById('submitBtn');
+    if (btn) btn.disabled = !validateForm() || isSubmitting;
+  }
+
+  function submitForm() {
+    if (isSubmitting) return;
+    if (!validateForm()) {
+      showToast('Заповніть всі поля!');
+      return;
+    }
+
+    isSubmitting = true;
+    updateSubmitAvailability();
+    document.getElementById('loader').style.display = 'flex';
+
+    const data = {
+      status: document.getElementById('status').value,
+      changeDate: document.getElementById('changeDate').value,
+      changedBy: document.getElementById('changedBy').value,
+      description: document.getElementById('description').value.trim()
+    };
+
+    google.script.run
+      .withSuccessHandler(() => {
+        document.getElementById('loader').style.display = 'none';
+        showToast('✅ Збережено');
+        setTimeout(() => google.script.host.close(), 1000);
+      })
+      .withFailureHandler(e => {
+        document.getElementById('loader').style.display = 'none';
+        isSubmitting = false;
+        showToast(`Помилка: ${(e && e.message) || e}`);
+        updateSubmitAvailability();
+      })
+      .appendData(data);
+  }
+
+  // --- ШВИДКЕ ДОДАВАННЯ ---
+
+  function showNewField(type) {
+    const id = (type === 'Статус') ? 'newStatusField' : 'newNameField';
+    document.getElementById(id).style.display = 'block';
+  }
+  
+  function hideNewField(type) {
+    const id = (type === 'Статус') ? 'newStatusField' : 'newNameField';
+    document.getElementById(id).style.display = 'none';
+  }
+
+  function addItem(type) {
+    if (type === 'Статус') {
+      const valEl = document.getElementById('newStatus');
+      const colEl = document.getElementById('newStatusColor');
+      const val = valEl.value.trim();
+      const col = colEl.value;
+      
+      if (val) {
+        google.script.run.addStatus(val, col);
+        
+        // Додаємо в Select
+        const select = document.getElementById('status');
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+        
+        // Обираємо його
+        select.value = val;
+        valEl.value = '';
+      }
+    } else {
+      const valEl = document.getElementById('newName');
+      const val = valEl.value.trim();
+      
+      if (val) {
+        google.script.run.addName(val);
+        
+        // Додаємо в Select
+        const select = document.getElementById('changedBy');
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+        
+        // Обираємо його
+        select.value = val;
+        valEl.value = '';
+      }
+    }
+    hideNewField(type);
+    updateSubmitAvailability();
+  }
+
+  // --- УТИЛІТИ ---
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit' });
+  }
+
+  ['status','changeDate','changedBy'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', updateSubmitAvailability);
+  });
+</script>

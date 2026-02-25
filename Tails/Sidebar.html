@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      :root { --pad: 20px; }
+      body { font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; padding: var(--pad); background: #f4f4f9; }
+      h2 { margin-top: 0; }
+      .section { margin-bottom: 16px; }
+      label { font-weight: 600; margin-top: 10px; display: block; }
+      .checkboxes {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 8px; max-height: 180px; overflow-y: auto; border: 1px solid #ccc;
+        background: #fff; padding: 10px; border-radius: 8px;
+      }
+      textarea {
+        width: 100%; height: 200px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace;
+        border: 1px solid #d0d0d5; border-radius: 8px; padding: 10px;
+      }
+      .btn { padding: 8px 14px; margin-right: 8px; margin-top: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+      .btn:disabled { opacity: .6; cursor: not-allowed; }
+      .btn:hover { filter: brightness(0.98); }
+      .btn-primary { background: #007bff; color: #fff; }
+      .btn-success { background: #28a745; color: #fff; }
+      .btn-secondary { background: #6c757d; color: #fff; }
+      .note { font-size: 12px; color: #555; }
+      #emailStatus { margin-top: 8px; font-style: italic; color: #333; }
+      .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .sticky-head { position: sticky; top: 0; background: #f9fafc; padding: 6px 0; z-index: 2; border-bottom: 1px dashed #ddd; }
+      :focus-visible { outline: 3px solid #4c9ffe; outline-offset: 2px; border-radius: 6px; }
+      .toast { position: fixed; right: 16px; bottom: 16px; padding: 10px 14px; border-radius: 10px; background: #333; color: #fff; opacity: 0; transform: translateY(8px); transition: .2s; z-index: 9999; }
+      .toast.show { opacity: 1; transform: translateY(0); }
+      .spinner { display: inline-block; width: 1em; height: 1em; border: 2px solid rgba(255,255,255,.6); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+      @keyframes spin { to { transform: rotate(360deg);} }
+      input[type="email"] { padding: 8px 10px; border-radius: 8px; border: 1px solid #d0d0d5; }
+    </style>
+  </head>
+  <body>
+    <div class="sticky-head">
+      <h2>Генератор SMS-повідомлень</h2>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <button class="btn btn-secondary" onclick="withBtnLoading(this, refreshHeaders)">Оновити дані</button>
+        <button class="btn btn-primary" onclick="withBtnLoading(this, generate)" title="Ctrl+G">Генерувати</button>
+      </div>
+      <label>Вибір колонок:</label>
+      <div class="checkboxes" id="columnsContainer"></div>
+    </div>
+
+    <div class="section">
+      <label>Попередній перегляд:</label>
+      <textarea id="previewArea" readonly></textarea>
+      <div class="note" id="charCount"></div>
+    </div>
+
+    <div class="section">
+      <button class="btn btn-success" onclick="copyToClipboard()" title="Ctrl+C">Копіювати</button>
+      <button class="btn btn-secondary" onclick="downloadTxt()" title="Ctrl+S">Зберегти у файл</button>
+    </div>
+
+    <div class="section">
+      <label for="emailInput">Електронна адреса для відправки:</label>
+      <input type="email" id="emailInput" placeholder="email@example.com" aria-describedby="emailHelp">
+      <button class="btn btn-primary" onclick="withBtnLoading(this, sendEmailMessage)">Надіслати e-mail</button>
+      <div id="emailStatus" class="note"></div>
+      <div id="emailHelp" class="note">Вкажи коректну адресу — поле підсвітиться, якщо ОК.</div>
+    </div>
+
+    <div class="section note">
+      Порада: обери колонки, згенеруй текст, скопіюй або збережи файл. Гарячі клавіші: Ctrl+G — згенерувати, Ctrl+C — копіювати, Ctrl+S — зберегти.
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      function showToast(msg){
+        const t=document.getElementById('toast');
+        t.textContent=msg;
+        t.classList.add('show');
+        clearTimeout(showToast._t);
+        showToast._t=setTimeout(()=>t.classList.remove('show'), 1800);
+      }
+
+      function withBtnLoading(btn, fn){
+        const old = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>' + old.replace(/<[^>]+>/g,'').trim();
+        const res = Promise.resolve().then(fn).catch(err => {
+          console.error(err); showToast('Помилка: ' + (err && err.message || err));
+        }).finally(()=>{
+          btn.disabled = false;
+          btn.innerHTML = old;
+        });
+        return res;
+      }
+
+      function refreshHeaders() {
+        return google.script.run.withSuccessHandler(populateColumns).getHeaders();
+      }
+
+      function populateColumns(headers) {
+        const container = document.getElementById("columnsContainer");
+        container.innerHTML = "";
+        headers.forEach((header, index) => {
+          const wrapper = document.createElement("div");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.id = "col" + index;
+          checkbox.value = index;
+          checkbox.checked = index < 9;
+          const label = document.createElement("label");
+          label.setAttribute("for", checkbox.id);
+          label.textContent = header || ('Колонка ' + (index+1));
+          wrapper.appendChild(checkbox);
+          wrapper.appendChild(label);
+          container.appendChild(wrapper);
+        });
+        showToast('Заголовки оновлено');
+      }
+
+      function generate() {
+        const checkboxes = document.querySelectorAll("#columnsContainer input[type=checkbox]:checked");
+        const selectedColumns = Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
+        const params = { selectedColumns };
+        const previewArea = document.getElementById("previewArea");
+        previewArea.value = "Генерується…";
+        document.getElementById("charCount").textContent = "";
+
+        return google.script.run.withSuccessHandler(result => {
+          previewArea.value = result;
+          document.getElementById("charCount").textContent = result.length + " символів";
+          showToast('Готово');
+        }).generateMessage(params);
+      }
+
+      function copyToClipboard() {
+        const preview = document.getElementById("previewArea");
+        preview.select();
+        navigator.clipboard.writeText(preview.value).then(() => {
+          showToast("Скопійовано");
+        }).catch(err => {
+          showToast("Не вдалося скопіювати: " + err);
+        });
+      }
+
+      function downloadTxt() {
+        const text = document.getElementById("previewArea").value;
+        const blob = new Blob([text], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "sms_message.txt";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Збережено файл');
+      }
+
+      function sendEmailMessage() {
+        const email = document.getElementById("emailInput").value.trim();
+        const message = document.getElementById("previewArea").value;
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        const status = document.getElementById("emailStatus");
+        status.textContent = "";
+        if (!ok) { showToast("Некоректний e-mail"); return; }
+        return google.script.run.withSuccessHandler(resp => {
+          status.textContent = resp;
+          showToast('Відправлено');
+        }).sendEmail(message, email);
+      }
+
+      // Гарячі клавіші
+      window.addEventListener('keydown', (e)=>{
+        if (e.ctrlKey && e.key.toLowerCase() === 'g') { e.preventDefault(); withBtnLoading(document.querySelector('.btn.btn-primary[title="Ctrl+G"]'), generate); }
+        if (e.ctrlKey && e.key.toLowerCase() === 'c') { e.preventDefault(); copyToClipboard(); }
+        if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); downloadTxt(); }
+      });
+
+      window.addEventListener("load", refreshHeaders);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,72 @@
+<div id="boardInfo" class="board-info">
+  <strong>Завантаження...</strong>
+  
+
+  <div id="historySection" class="history-section" style="display:none;">
+    <div class="history-title">Останні події по борту</div>
+    <div id="historyList"></div>
+  </div>
+  <span>Отримання даних...</span>
+</div>
+
+<form id="myForm" autocomplete="off">
+  <div>
+    <label for="status">Статус:</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <select id="status" name="status" required style="flex:1;">
+        <option value="" disabled selected>— Оберіть статус —</option>
+      </select>
+      <button type="button" class="add-btn" onclick="showNewField('Статус')" title="Додати новий статус">+</button>
+    </div>
+
+    <div id="newStatusField" class="new-field-area">
+      <label>Новий статус:</label>
+      <input type="text" id="newStatus" placeholder="Напр. Експлуатація">
+      <div style="margin: 8px 0;">
+        <label>Колір:</label>
+        <input type="color" id="newStatusColor" value="#2196F3" style="height:36px; padding:0; border:none;">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="add-btn" onclick="addItem('Статус')">Зберегти</button>
+        <button type="button" class="cancel-btn" onclick="hideNewField('Статус')">Скасувати</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <label for="changeDate">Дата події:</label>
+    <input type="date" id="changeDate" name="changeDate" required>
+  </div>
+
+  <div>
+    <label for="changedBy">Хто змінив:</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <select id="changedBy" name="changedBy" required style="flex:1;">
+        <option value="" disabled selected>— Оберіть ім'я —</option>
+      </select>
+      <button type="button" class="add-btn" onclick="showNewField('Ім\'я')" title="Додати імʼя">+</button>
+    </div>
+
+    <div id="newNameField" class="new-field-area">
+      <label>Нове імʼя / Позивний:</label>
+      <input type="text" id="newName" placeholder="Імʼя / Позивний">
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="add-btn" onclick="addItem('Ім\'я')">Зберегти</button>
+        <button type="button" class="cancel-btn" onclick="hideNewField('Ім\'я')">Скасувати</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <label for="description">Коментар / Деталі (опційно):</label>
+    <textarea id="description" name="description" rows="3" placeholder="Що саме зробили, причини зміни тощо..."></textarea>
+  </div>
+
+  <div>
+    <button id="submitBtn" type="button" class="submit-btn" onclick="submitForm()" disabled>Зберегти</button>
+  </div>
+</form>
+
+
+<div id="loader" class="loader-overlay"><div class="loader-spinner"></div></div>
+<div id="toast" class="toast"></div>
