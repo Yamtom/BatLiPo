@@ -21,21 +21,28 @@
   function loadAllData() {
     google.script.run
       .withSuccessHandler(data => {
-        if (!data) {
-          document.getElementById('boardInfo').innerHTML = 'Помилка завантаження даних';
-          return;
+        try {
+          if (!data) {
+            document.getElementById('boardInfo').innerHTML = 'Помилка завантаження даних';
+            return;
+          }
+          
+          fillSelect('status', data.statuses || [], 'value');
+          fillSelect('changedBy', data.names || []);
+
+          renderBoardInfo(data.meta || null);
+
+          const meta = data.meta || { isMassEdit: false };
+          renderHistory(data.history || [], meta.isMassEdit);
+
+          updateSubmitAvailability();
+        } catch (renderErr) {
+          const box = document.getElementById('boardInfo');
+          if (box) {
+            box.innerHTML = '<strong style="color:#FF9800">Дані частково завантажено. Можна зберігати зміни.</strong>';
+          }
+          updateSubmitAvailability();
         }
-        
-        // Заповнюємо списки селектів
-        fillSelect('status', data.statuses || [], 'value');
-        fillSelect('changedBy', data.names || []);
-
-        renderBoardInfo(data.meta || null);
-
-        const meta = data.meta || { isMassEdit: false };
-        renderHistory(data.history || [], meta.isMassEdit);
-
-        updateSubmitAvailability();
       })
       .withFailureHandler(err => {
         const box = document.getElementById('boardInfo');
@@ -84,11 +91,14 @@
       // Беремо останній рядок статусу (якщо історія записана через Enter)
       const lines = raw.split(/\r?\n/).filter(l => l.trim() !== '');
       const lastStatus = lines.length ? lines[lines.length - 1] : 'Немає статусу';
+      const safeBoardId = escapeHtml(meta.boardId || 'Невизначено');
+      const safeSheetName = escapeHtml(meta.sheetName || '');
+      const safeLastStatus = escapeHtml(lastStatus);
       
       infoBox.innerHTML = `
-        <strong>Борт: ${meta.boardId || 'Невизначено'}</strong>
-        <span>${meta.sheetName}, Рядок ${meta.row}</span>
-        <div style="margin-top:4px;">Поточний: <b>${lastStatus}</b></div>
+        <strong>Борт: ${safeBoardId}</strong>
+        <span>${safeSheetName}, Рядок ${meta.row}</span>
+        <div style="margin-top:4px;">Поточний: <b>${safeLastStatus}</b></div>
       `;
       infoBox.style.borderLeftColor = '#2196F3';
     }
@@ -110,13 +120,25 @@
       div.className = 'history-item';
       if (h.color) div.style.borderLeftColor = h.color;
 
+      let safeDate = '';
+      try {
+        safeDate = formatDate(h.date);
+      } catch (_) {
+        safeDate = String(h.date || '');
+      }
+
+      const safeWho = escapeHtml(h.who || '');
+      const safeStatus = escapeHtml(h.status || '');
+      const safeDesc = escapeHtml(h.desc || '');
+      const safeDateText = escapeHtml(safeDate);
+
       div.innerHTML = `
         <div class="history-header">
-          <span>${formatDate(h.date)}</span>
-          <span>${h.who || ''}</span>
+          <span>${safeDateText}</span>
+          <span>${safeWho}</span>
         </div>
-        <div class="history-status" style="color:${h.color || 'inherit'}">${h.status || ''}</div>
-        <div class="history-desc">${h.desc || ''}</div>
+        <div class="history-status" style="color:${h.color || 'inherit'}">${safeStatus}</div>
+        <div class="history-desc">${safeDesc}</div>
       `;
       list.appendChild(div);
     });
@@ -235,10 +257,41 @@
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function formatDate(iso) {
     if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit' });
+
+    if (Object.prototype.toString.call(iso) === '[object Date]') {
+      if (!Number.isNaN(iso.getTime())) {
+        return iso.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit' });
+      }
+      return '';
+    }
+
+    const str = String(iso).trim();
+    if (!str) return '';
+
+    const parsed = new Date(str);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit' });
+    }
+
+    const m = str.match(/^(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?$/);
+    if (m) {
+      const dd = m[1].padStart(2, '0');
+      const mm = m[2].padStart(2, '0');
+      return `${dd}.${mm}`;
+    }
+
+    return str;
   }
 
   ['status','changeDate','changedBy'].forEach(id => {
