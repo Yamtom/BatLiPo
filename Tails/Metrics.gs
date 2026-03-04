@@ -41,7 +41,9 @@ function updateFairnessMetrics() {
           const d = parseDate(v); if (d) holidaySet.add(d.toDateString());
         });
       }
-    } catch(_) {}
+    } catch (e) {
+      Logger.log('updateFairnessMetrics skipped HOLIDAYS range: ' + e.message);
+    }
 
     // Зчитуємо сітку розкладу
     const grid = sh.getRange(2, CONFIG.dateStartColumn, lastRow-1, lastCol - CONFIG.dateStartColumn + 1).getValues(); // [rows][days]

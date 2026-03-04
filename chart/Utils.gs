@@ -8,6 +8,14 @@ function getOrCreateSheet(sheetName, headers = []) {
   return sheet;
 }
 
+function requireSheet_(sheetName) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    throw new Error(`Не знайдено аркуш "${sheetName}".`);
+  }
+  return sheet;
+}
+
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename)
     .getContent();
@@ -15,6 +23,69 @@ function include(filename) {
 
 function logError(fnName, error) {
   console.error(`Error in ${fnName}: ${error}`);
+}
+
+function getBoardIdFromRow_(sheetName, rowValues) {
+  if (!rowValues) return '';
+  if (sheetName === SHEET_LASAR) {
+    const series = String(rowValues[COL_LASAR_SERIES - 1] || '').trim();
+    const number = String(rowValues[COL_LASAR_NUMBER - 1] || '').trim();
+    return series && number ? `${series}.${number}` : '';
+  }
+  if (sheetName === SHEET_NEMESIS) {
+    return String(rowValues[COL_NEMESIS_ID - 1] || '').trim();
+  }
+  return '';
+}
+
+function buildStatusHistoryLine_(data) {
+  const statusLine = `Статус: ${data.status}, Дата: ${data.changeDate}, Хто: ${data.changedBy}`;
+  return data.description ? `${statusLine}, Опис: ${data.description}` : statusLine;
+}
+
+function getLatestBoardStatus_(cellValue) {
+  const lines = String(cellValue || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return '';
+
+  const lastLine = lines[lines.length - 1];
+  const match = lastLine.match(/^Статус:\s*(.*?)(?:,\s*Дата:|$)/i);
+  return match ? match[1].trim() : '';
+}
+
+function getLatestBoardStatusFromRow_(rowValues) {
+  if (!Array.isArray(rowValues)) return '';
+  for (let i = rowValues.length - 1; i >= 0; i--) {
+    const status = getLatestBoardStatus_(rowValues[i]);
+    if (status) return status;
+  }
+  return '';
+}
+
+function isLostBoardStatus_(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  return ['втрачений', 'lost', 'збито'].includes(normalized);
+}
+
+function makeColorMatrix_(numRows, width, color) {
+  return Array.from({ length: numRows }, () => new Array(width).fill(color));
+}
+
+function buildChartLogRow_(colMap, width, data, sourceSheetName, sourceRowValues, email) {
+  const row = new Array(width).fill('');
+  const boardId = getBoardIdFromRow_(sourceSheetName, sourceRowValues) || 'Невизначено';
+
+  if (colMap['Статус']) row[colMap['Статус'] - 1] = data.status;
+  if (colMap['Дата зміни']) row[colMap['Дата зміни'] - 1] = data.changeDate;
+  if (colMap['Хто']) row[colMap['Хто'] - 1] = data.changedBy;
+  if (colMap['Опис']) row[colMap['Опис'] - 1] = data.description || '';
+  if (colMap['Час']) row[colMap['Час'] - 1] = new Date();
+  if (colMap['Email']) row[colMap['Email'] - 1] = email;
+  if (colMap['Борт']) row[colMap['Борт'] - 1] = boardId;
+
+  return row;
 }
 
 /**

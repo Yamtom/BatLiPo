@@ -29,7 +29,7 @@ const CONFIG = {
     AMMO_INNER: 13,   // M - внутрішні підвіси
     INTEGRITY: 14,    // N
     NOTES: 15,        // O
-    RISK: 19          // P
+    RISK: 19          // fallback index if the header row does not expose a dedicated RISK column
   },
 
   // Налаштування ризику

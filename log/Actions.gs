@@ -1,4 +1,3 @@
-/** ===== onEdit (дата + час + ризик) ===== */
 function onEdit(e) {
   if (!e || !e.range) return;
   const sh = e.range.getSheet();
@@ -72,16 +71,13 @@ function updateDurationAndRiskForRow_(sh, row) {
   const landing   = sh.getRange(row, CONFIG.COLS.LANDING).getValue();
   const integrity = sh.getRange(row, CONFIG.COLS.INTEGRITY).getValue();
   const ew        = sh.getRange(row, CONFIG.COLS.EW_ACTION).getValue();
+  const riskCol   = getRiskColumnForSheet_(sh);
 
   const ms = computeDurationMs(takeoff, landing);
-
-  // Тривалість у колонку G не пишемо; використовуємо лише для розрахунку ризику
   const isRisk = calculateRiskFactor(integrity, ew, ms);
-  sh.getRange(row, CONFIG.COLS.RISK).setValue(isRisk);
+  sh.getRange(row, riskCol).setValue(isRisk);
 }
 
-
-/** Нормалізація дат у вибраному діапазоні */
 function recalcAllDates_(sh, startRow, numRows) {
   const range = sh.getRange(startRow, CONFIG.COLS.DATE, numRows, 1);
   const vals = range.getValues();
@@ -113,8 +109,6 @@ function recalcAllDates_(sh, startRow, numRows) {
   }
 }
 
-/** Масовий перерахунок тривалості і ризиків (по всьому або по виділеному діапазону) */
-/** Масовий перерахунок ризиків (RISK) для всіх / виділених рядків */
 function recalcAllDurations() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(CONFIG.SHEET_DATA);
@@ -142,14 +136,13 @@ function recalcAllDurations() {
     return;
   }
 
-  // Дати нормалізуються, щоб сортування і фільтри працювали
   recalcAllDates_(sh, startRow, numRows);
 
-  const lastCol = Math.max(...Object.values(CONFIG.COLS));
+  const riskColumn = getRiskColumnForSheet_(sh);
+  const lastCol = Math.max(sh.getLastColumn(), CONFIG.COLS.NOTES, riskColumn);
   const range = sh.getRange(startRow, 1, numRows, lastCol);
   const values = range.getValues();
-
-  const riskCol = [];
+  const riskValues = [];
 
   for (let i = 0; i < values.length; i++) {
     const row = values[i];
@@ -160,16 +153,14 @@ function recalcAllDurations() {
 
     const ms = computeDurationMs(takeoff, landing);
     const isRisk = calculateRiskFactor(integrity, ew, ms);
-    riskCol.push([isRisk]);
+    riskValues.push([isRisk]);
   }
 
-  sh.getRange(startRow, CONFIG.COLS.RISK, numRows, 1).setValues(riskCol);
+  sh.getRange(startRow, riskColumn, numRows, 1).setValues(riskValues);
 
   ss.toast('✅ Перераховано ризики для рядків ' + startRow + '–' + endRow + '.');
 }
 
-
-/** Додавання польоту з форми */
 function addFlight(data) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) throw new Error('Сервер зайнятий. Спробуйте ще раз.');
@@ -179,8 +170,9 @@ function addFlight(data) {
     const sh = ss.getSheetByName(CONFIG.SHEET_DATA);
     if (!sh) throw new Error('Аркуш "' + CONFIG.SHEET_DATA + '" не знайдено');
 
-    const maxCol = Math.max(...Object.values(CONFIG.COLS));
-    const rowData = new Array(maxCol).fill('');
+    const riskCol = getRiskColumnForSheet_(sh);
+    const rowWidth = Math.max(sh.getLastColumn(), riskCol, CONFIG.COLS.NOTES);
+    const rowData = new Array(rowWidth).fill('');
 
     const dateObj    = normalizeDateValue_(data.dateISO);
     const takeoffObj = data.takeoffISO ? normalizeTime(data.takeoffISO) : '';
@@ -199,19 +191,18 @@ function addFlight(data) {
 
     rowData[CONFIG.COLS.EW_ACTION  - 1] = !!data.ewAction;
     rowData[CONFIG.COLS.AREA       - 1] = data.area;
-    rowData[CONFIG.COLS.HIT_COUNT  - 1] = data.hitCount ? Number(data.hitCount) : '';
+    rowData[CONFIG.COLS.HIT_COUNT  - 1] = toOptionalNumber_(data.hitCount);
     rowData[CONFIG.COLS.TARGET_TYPE- 1] = data.targetType;
     rowData[CONFIG.COLS.AMMO_OUTER - 1] = data.ammoOuter || '';
     rowData[CONFIG.COLS.AMMO_INNER - 1] = data.ammoInner || '';
     rowData[CONFIG.COLS.INTEGRITY  - 1] = data.integrity;
     rowData[CONFIG.COLS.NOTES      - 1] = data.notes;
-    rowData[CONFIG.COLS.RISK       - 1] = isRisk;
+    rowData[riskCol - 1] = isRisk;
 
-    // Перший вільний рядок шукається за колонкою DATE (A)
     const lastDataRow = getLastDataRowByColumn_(sh, CONFIG.COLS.DATE, CONFIG.DATA_START_ROW);
     const targetRow = Math.max(lastDataRow + 1, CONFIG.DATA_START_ROW);
 
-    sh.getRange(targetRow, 1, 1, maxCol).setValues([rowData]);
+    sh.getRange(targetRow, 1, 1, rowWidth).setValues([rowData]);
 
     sh.getRange(targetRow, CONFIG.COLS.DATE).setNumberFormat(CONFIG.DATE_FORMAT);
     sh.getRange(targetRow, CONFIG.COLS.TAKEOFF).setNumberFormat(CONFIG.TIME_FORMAT);
@@ -234,7 +225,6 @@ function addFlight(data) {
   }
 }
 
-/** Зріз (спирається на нормалізовану дату) */
 function runSliceWithFilters(params) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(CONFIG.SHEET_DATA);
@@ -252,6 +242,7 @@ function runSliceWithFilters(params) {
 
   const vals = sh.getRange(CONFIG.DATA_START_ROW, 1, lastRow - CONFIG.DATA_START_ROW + 1, sh.getLastColumn()).getValues();
   const headerVals = sh.getRange(1, 1, CONFIG.DATA_START_ROW - 1, sh.getLastColumn()).getValues();
+  const riskCol = getRiskColumnForSheet_(sh);
 
   const out = [];
   let totalHits = 0;
@@ -284,7 +275,7 @@ function runSliceWithFilters(params) {
       if (ms) totalDurationMs += ms;
     }
 
-    if (row[CONFIG.COLS.RISK - 1] == 1) riskCount++;
+    if (row[riskCol - 1] == 1) riskCount++;
   }
 
   const sliceName = 'Зріз ' + params.startISO + '_' + params.endISO;
@@ -313,7 +304,6 @@ function runSliceWithFilters(params) {
   return { ok: true, rows: out.length, sheet: sliceName };
 }
 
-/** Сортування */
 function sortByDateTime() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getActiveSheet();
@@ -325,7 +315,6 @@ function sortByDateTime() {
   const lastRow = sh.getLastRow();
   if (lastRow < CONFIG.DATA_START_ROW) return;
 
-  // Нормалізуємо дати тільки на активному аркуші
   recalcAllDates_(sh, CONFIG.DATA_START_ROW, lastRow - CONFIG.DATA_START_ROW + 1);
 
   const range = sh.getRange(CONFIG.DATA_START_ROW, 1, lastRow - CONFIG.DATA_START_ROW + 1, sh.getLastColumn());
@@ -337,7 +326,6 @@ function sortByDateTime() {
   ss.toast('✅ Відсортовано за датою і часом');
 }
 
-/** Перехід до останнього логічного рядка (по колонці A/DATE) */
 function goToLastRow() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(CONFIG.SHEET_DATA);
@@ -350,4 +338,27 @@ function goToLastRow() {
   const range = sh.getRange(targetRow, CONFIG.COLS.DATE);
   sh.setActiveRange(range);
   SpreadsheetApp.flush();
+}
+
+function getRiskColumnForSheet_(sh) {
+  const lastCol = sh.getLastColumn();
+  const headerRows = Math.max(1, CONFIG.DATA_START_ROW - 1);
+  const headers = sh.getRange(1, 1, headerRows, lastCol).getDisplayValues();
+
+  for (let r = 0; r < headers.length; r++) {
+    for (let c = 0; c < headers[r].length; c++) {
+      const value = String(headers[r][c] || '').trim().toLowerCase();
+      if (value.includes('risk') || value.includes('ризик')) {
+        return c + 1;
+      }
+    }
+  }
+
+  return CONFIG.COLS.RISK;
+}
+
+function toOptionalNumber_(value) {
+  if (value === '' || value == null) return '';
+  const num = Number(value);
+  return Number.isFinite(num) ? num : '';
 }

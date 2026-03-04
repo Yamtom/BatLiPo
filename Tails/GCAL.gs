@@ -31,7 +31,9 @@ function onEdit(e) {
     const events = cal.getEventsForDay(dt);
     const newNote = buildNote(events, dt);
     upsertNote(sh.getRange(e.range.getRow(), e.range.getColumn()), newNote);
-  } catch (_) {}
+  } catch (e) {
+    sendErrorNotification(e, 'gcalOnEdit');
+  }
 }
 
 /** Ручний або плановий обхід усіх аркушів */
@@ -39,7 +41,6 @@ function syncAllChunked() {
   const t0 = Date.now();
   const cfg = readConfig();
   const cal = CalendarApp.getCalendarById(cfg.calendarId);
-  const STATE_KEY = 'gcal_sync_cursor_v2';
 
   if (!cal) throw new Error('Календар не знайдено: ' + cfg.calendarId);
 
@@ -162,16 +163,13 @@ function upsertNote(range, plainNote) {
 
 /** Парсинг дати */
 function coerceToDate(v) {
-  // Значення вже є Date
   if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) {
     return new Date(v.getFullYear(), v.getMonth(), v.getDate());
   }
-  // Значення є серійним числом
   if (typeof v === 'number') {
     const d = new Date(BASE_EPOCH.getTime() + v * 86400000);
     if (!isNaN(d)) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
-  // Значення є рядком
   if (typeof v === 'string') {
     const s = v.trim();
     const patterns = [
@@ -179,7 +177,7 @@ function coerceToDate(v) {
       [/^(\d{1,2})\.(\d{1,2})$/, (d,m)=> new Date((new Date).getFullYear(), m-1, d)],
       [/^(\d{4})-(\d{2})-(\d{2})$/, (y,m,d)=> new Date(y, m-1, d)],
       [/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, (d,m,y)=> new Date(y, m-1, d)],
-      [/^(\d{1,2})\/(\d{1,2})$/, (m,d)=> new Date((new Date).getFullYear(), m-1, d)],
+      [/^(\d{1,2})\/(\d{1,2})$/, (d,m)=> new Date((new Date).getFullYear(), m-1, d)],
     ];
     for (const [re, ctor] of patterns) {
       const m = s.match(re);

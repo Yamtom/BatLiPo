@@ -1,9 +1,3 @@
-/** ===========================
- * Validation (codes)
- * - Data validation: regex по allowed codes
- * - Conditional formatting: font color, щоб не ламати фони (duty, дати)
- * =========================== */
-
 function setupValidationActiveSheet() {
   applyShiftCodeValidationForSheet_(SpreadsheetApp.getActiveSheet());
   toast('Валідацію встановлено (активний лист)');
@@ -27,13 +21,9 @@ function applyShiftCodeValidationForSheet_(sheet) {
   const numCols = lastCol - CONFIG.dateStartColumn + 1;
 
   const range = sheet.getRange(CONFIG.scheduleStartRow, CONFIG.dateStartColumn, numRows, numCols);
-
-  // regex: строго повний матч, без пробілів на краях
-  // Важливо: allowedCodes тримаємо у lowercase в Settings; uppercase вважаємо "помилкою"
   const inner = buildAllowedRegexInner_(CONFIG.allowedCodes);
   const fullRegex = `^(?:${inner})$`;
 
-  // Data validation: дозволяємо інвалідні (щоб не блокувати роботу), але позначаємо
   const dv = SpreadsheetApp.newDataValidation()
     .requireTextMatchesPattern(fullRegex)
     .setAllowInvalid(true)
@@ -41,7 +31,6 @@ function applyShiftCodeValidationForSheet_(sheet) {
 
   range.setDataValidation(dv);
 
-  // Conditional formatting: червоний шрифт для невалідних
   const topLeft = range.getCell(1, 1).getA1Notation(); // наприклад C4
   const cfFormula = `=AND(LEN(${topLeft})>0,NOT(REGEXMATCH(LOWER(${topLeft}),"${escapeForSheetRegex_(fullRegex)}")))`;
 
@@ -51,16 +40,15 @@ function applyShiftCodeValidationForSheet_(sheet) {
     .setRanges([range])
     .build();
 
-  // Rule додається без зміни інших
-  const rules = sheet.getConditionalFormatRules() || [];
+  const rangeA1 = range.getA1Notation();
+  const rules = (sheet.getConditionalFormatRules() || [])
+    .filter(existing => !isShiftValidationRule_(existing, rangeA1, cfFormula));
   rules.push(rule);
   sheet.setConditionalFormatRules(rules);
 }
 
-// allowedCodes -> regex alternatives, з екрануванням
 function buildAllowedRegexInner_(codes) {
   const uniq = Array.from(new Set((codes || []).map(x => String(x).trim().toLowerCase()).filter(Boolean)));
-  // Екрануємо спецсимволи regex; кирилицю лишаємо без змін
   return uniq.map(escapeRegex_).join('|') || escapeRegex_('п+ш');
 }
 
@@ -68,7 +56,19 @@ function escapeRegex_(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Для REGEXMATCH у Sheets: потрібна додаткова екранування лапок і бекслешів
 function escapeForSheetRegex_(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function isShiftValidationRule_(rule, rangeA1, formula) {
+  const ranges = typeof rule.getRanges === 'function' ? rule.getRanges() : [];
+  if (ranges.length !== 1 || ranges[0].getA1Notation() !== rangeA1) return false;
+
+  if (typeof rule.getBooleanCondition !== 'function') return false;
+  const condition = rule.getBooleanCondition();
+  if (!condition) return false;
+
+  if (condition.getCriteriaType() !== SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA) return false;
+  const values = condition.getCriteriaValues();
+  return Array.isArray(values) && String(values[0] || '') === formula;
 }

@@ -92,8 +92,8 @@ function countCellsByColor(rangeA, colorAddrs, dummy) {
           const sh = ss.getSheetByName(p.sheetName) || dataSheet; // якщо лист не вказаний — беремо лист даних
           const col = sh.getRange(p.a1).getBackground();
           colors.add(String(col).trim().toLowerCase());
-        } catch (_) {
-          // Невалідні адреси пропускаються
+        } catch (e) {
+          Logger.log('countCellsByColor skipped target "' + tgt + '": ' + e.message);
         }
       }
     }
