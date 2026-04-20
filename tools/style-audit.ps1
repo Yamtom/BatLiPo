@@ -2,10 +2,8 @@ param(
   [string]$Root = ".",
   [int]$MaxGrok = 20,
   [int]$MaxClaude = 20,
-  [int]$MinChatGPT = 15,
-  [int]$MaxChatGPT = 25,
-  [int]$MinGemini = 15,
-  [int]$MaxGemini = 25,
+  [int]$MaxChatGPT = 20,
+  [int]$MaxGemini = 20,
   [switch]$ChangedOnly
 )
 
@@ -118,8 +116,8 @@ foreach ($f in $files) {
 
   if ($score.Grok -gt $MaxGrok) { $status = "FAIL"; $issues += "Grok>$MaxGrok" }
   if ($score.Claude -gt $MaxClaude) { $status = "FAIL"; $issues += "Claude>$MaxClaude" }
-  if ($score.ChatGPT -lt $MinChatGPT -or $score.ChatGPT -gt $MaxChatGPT) { $status = "WARN"; $issues += "ChatGPT out of $MinChatGPT-$MaxChatGPT" }
-  if ($score.Gemini -lt $MinGemini -or $score.Gemini -gt $MaxGemini) { $status = "WARN"; $issues += "Gemini out of $MinGemini-$MaxGemini" }
+  if ($score.ChatGPT -gt $MaxChatGPT) { $status = "WARN"; $issues += "ChatGPT>$MaxChatGPT" }
+  if ($score.Gemini -gt $MaxGemini) { $status = "WARN"; $issues += "Gemini>$MaxGemini" }
 
   $results += [pscustomobject]@{
     File = $rel

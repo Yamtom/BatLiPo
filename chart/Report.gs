@@ -26,29 +26,37 @@ function updateReport() {
   const idxStatus = headers.indexOf('Статус');
   const idxWho = headers.indexOf('Хто');
 
+  if (idxTime === -1) {
+    sh.getRange(6, 1).setValue('У журналі відсутня колонка "Час"');
+    return;
+  }
+
   const data = log.getRange(2, 1, lastRow-1, log.getLastColumn()).getValues();
   const now = new Date();
   const days30 = 30 * 24 * 60 * 60 * 1000;
 
   let changes30 = 0;
-  const statusCounts = {};
-  const operatorStats = {};
+  const statusCounts = Object.create(null);
+  const operatorStats = Object.create(null);
+  const bump = (bucket, key) => {
+    bucket[key] = (bucket[key] || 0) + 1;
+  };
 
   data.forEach(row => {
     const d = new Date(row[idxTime]);
-    if (!isFinite(d)) return;
+    if (!isFinite(d.getTime())) return;
 
     if (now - d <= days30) {
        changes30++;
        if (idxWho !== -1) {
          const who = row[idxWho] || 'Не вказано';
-         operatorStats[who] = (operatorStats[who] || 0) + 1;
+         bump(operatorStats, who);
        }
     }
 
     if (idxStatus !== -1) {
       const st = row[idxStatus];
-      if (st) statusCounts[st] = (statusCounts[st] || 0) + 1;
+      if (st) bump(statusCounts, st);
     }
   });
 

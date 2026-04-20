@@ -19,23 +19,36 @@ function loadConfig() {
   };
 
   const props = PropertiesService.getScriptProperties().getProperties();
-  try {
-    return {
-      sheetNames: JSON.parse(props.SHEET_NAMES || JSON.stringify(defaults.sheetNames)),
-      headerRow: Number(props.HEADER_ROW) || defaults.headerRow,
-      dateRow: Number(props.DATE_ROW) || defaults.dateRow,
-      dateStartColumn: Number(props.DATE_START_COLUMN) || defaults.dateStartColumn,
-      scheduleStartRow: Number(props.SCHEDULE_START_ROW) || defaults.scheduleStartRow,
-      allowedCodes: JSON.parse(props.ALLOWED_CODES || JSON.stringify(defaults.allowedCodes)),
-      invalidCodeFontColor: props.INVALID_CODE_FONT_COLOR || defaults.invalidCodeFontColor,
-      monitoredEditRanges: JSON.parse(props.MONITORED_EDIT_RANGES || JSON.stringify(defaults.monitoredEditRanges)),
-      errorNotificationEmail: props.ERROR_NOTIFICATION_EMAIL || defaults.errorNotificationEmail,
-      customFunctions: JSON.parse(props.CUSTOM_FUNCTIONS || JSON.stringify(defaults.customFunctions))
-    };
-  } catch (e) {
-    Logger.log('Config parsing error: ' + e);
-    return defaults;
-  }
+  const config = { ...defaults };
+  const readers = {
+    json: (value, fallback) => JSON.parse(value || JSON.stringify(fallback)),
+    number: (value, fallback) => Number(value) || fallback,
+    text: (value, fallback) => value || fallback
+  };
+
+  const fields = [
+    ['sheetNames', 'SHEET_NAMES', 'json'],
+    ['headerRow', 'HEADER_ROW', 'number'],
+    ['dateRow', 'DATE_ROW', 'number'],
+    ['dateStartColumn', 'DATE_START_COLUMN', 'number'],
+    ['scheduleStartRow', 'SCHEDULE_START_ROW', 'number'],
+    ['allowedCodes', 'ALLOWED_CODES', 'json'],
+    ['invalidCodeFontColor', 'INVALID_CODE_FONT_COLOR', 'text'],
+    ['monitoredEditRanges', 'MONITORED_EDIT_RANGES', 'json'],
+    ['errorNotificationEmail', 'ERROR_NOTIFICATION_EMAIL', 'text'],
+    ['customFunctions', 'CUSTOM_FUNCTIONS', 'json']
+  ];
+
+  fields.forEach(([field, key, mode]) => {
+    try {
+      config[field] = readers[mode](props[key], defaults[field]);
+    } catch (e) {
+      Logger.log('Config key parsing error [' + key + ']: ' + e);
+      config[field] = defaults[field];
+    }
+  });
+
+  return config;
 }
 let CONFIG = loadConfig();
 
