@@ -20,6 +20,8 @@
 ## `Config.gs`
 
 - `BDAY_CFG`: id календаря, назва аркуша, мапінг колонок, шаблон заголовка.
+- `BDAY_CFG.calendarId`: цільовий календар для запису подій. Для цього проєкту встановлено `BatLiPo66@gmail.com`.
+- `BDAY_CFG.sheetName`: аркуш-джерело `Особисті данні` в активній таблиці.
 
 ## `Birthdays.gs`
 
@@ -35,18 +37,9 @@ HTML-файли:
 
 - У цьому проєкті HTML-файлів немає.
 
-Дерево викликів:
-
-1. `createOrUpdateBirthdaysFromSheet`
-Дочірні: `coerceToDate`, `findBirthdayEventForDay_`, `findCalendarEntryById_`, `removeCalendarEntry_`, `applyBirthdayColor_`, `writeBirthdayEventId_`.
-
-2. `findCalendarEntryById_`
-Дочірні: Calendar API (`getEventSeriesById`, `getEventById`).
-
-3. `removeCalendarEntry_`
-Дочірні: Calendar API (`deleteEventSeries`, `deleteEvent`) із безпечною обробкою помилок.
-
 Примітки:
 
 - Ідентифікатори подій зберігаються назад у аркуш для ідемпотентних оновлень.
 - `coerceToDate` підтримує дати аркуша, серійні числа і типові текстові формати.
+- Функція читає `SpreadsheetApp.getActive()`, тому запускати її треба з контексту потрібної таблиці `СПИСОК`.
+- Для успішного запуску акаунт-виконавець скрипта має мати доступ на запис до календаря `BatLiPo66@gmail.com`.

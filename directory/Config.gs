@@ -1,5 +1,5 @@
 const BDAY_CFG = {
-  calendarId: 'primary',
+  calendarId: 'BatLiPo66@gmail.com',
   sheetName: 'Особисті данні',
   nameCol: 3,
   dateCol: 7,

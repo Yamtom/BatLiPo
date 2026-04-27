@@ -7,8 +7,7 @@ function createOrUpdateBirthdaysFromSheet() {
 
   const width = Math.max(BDAY_CFG.eventIdCol, BDAY_CFG.dateCol);
   const rows = sh.getRange(2, 1, lastRow - 1, width).getValues();
-  const cal = CalendarApp.getCalendarById(BDAY_CFG.calendarId);
-  if (!cal) throw new Error('Не знайдено календар: ' + BDAY_CFG.calendarId);
+  const cal = resolveCalendarOrThrow_(BDAY_CFG.calendarId);
 
   const yearNow = new Date().getFullYear();
   rows.forEach((row, i) => {
@@ -41,6 +40,31 @@ function createOrUpdateBirthdaysFromSheet() {
     applyBirthdayColor_(series);
     writeBirthdayEventId_(sh, rowNumber, series.getId());
   });
+}
+
+function resolveCalendarOrThrow_(calendarRef) {
+  const ref = String(calendarRef || '').trim();
+  if (!ref) throw new Error('Не задано BDAY_CFG.calendarId');
+
+  const byId = CalendarApp.getCalendarById(ref);
+  if (byId) return byId;
+
+  const byName = CalendarApp.getCalendarsByName(ref);
+  if (byName && byName.length) return byName[0];
+
+  const all = CalendarApp.getAllCalendars();
+  const sample = all
+    .slice(0, 10)
+    .map(c => `${c.getName()} <${c.getId()}>`)
+    .join('; ');
+  const userEmail = Session.getActiveUser().getEmail() || 'невідомий користувач';
+
+  throw new Error(
+    'Не знайдено календар: ' + ref +
+    '. Запуск: ' + userEmail +
+    '. Дайте цьому акаунту доступ до календаря або вкажіть коректний calendarId. ' +
+    'Доступні календарі (перші 10): ' + (sample || 'немає')
+  );
 }
 
 function writeBirthdayEventId_(sheet, rowNumber, eventId) {
