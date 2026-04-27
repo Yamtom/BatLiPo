@@ -17,13 +17,42 @@ function createDailyTrigger() {
     .create();
 }
 
-function onOpen() {
+function createGcalEditTrigger() {
+  clearTriggersByFns(['onEdit']);
+  ScriptApp.newTrigger('onEdit')
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onEdit()
+    .create();
+}
+
+function createMenuOpenTrigger() {
+  clearTriggersByFns(['onOpen']);
+  ScriptApp.newTrigger('onOpen')
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onOpen()
+    .create();
+}
+
+function createTailsTriggers() {
+  createDailyTrigger();
+  createGcalEditTrigger();
+  createMenuOpenTrigger();
+}
+
+function repairTailsUi() {
+  buildTailsMenus_();
+  createTailsTriggers();
+  toast('Меню і тригери Tails відновлено. Якщо меню не видно, оновіть таблицю.', 5);
+}
+
+function buildTailsMenus_() {
   SpreadsheetApp.getUi()
     .createMenu('🛠️ Скрипти')
     .addItem('Оновити (колір + підрахунки)', 'refreshAll')
     .addItem('Перефарбувати заголовки (усі листи)', 'colorCells')
     .addItem('Оновити підрахунки (активний лист)', 'refreshColorCountsActiveSheet')
     .addItem('Відновити щоденний тригер (01:00)', 'createDailyTrigger')
+    .addItem('Відновити меню й тригери', 'repairTailsUi')
     .addSeparator()
     .addItem('Відкрити SMS панель', 'showSidebar')
     .addSeparator()
@@ -32,13 +61,18 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('GCAL Sync')
     .addItem('Створити конфіг', 'ensureConfigSheet')
+    .addItem('Відновити onEdit тригер', 'createGcalEditTrigger')
     .addItem('Ручний запуск: синхронізувати все', 'syncAllChunked')
     .addToUi();
 }
 
+function onOpen() {
+  buildTailsMenus_();
+}
+
 function onInstall(e) {
   onOpen(e);
-  createDailyTrigger();
+  createTailsTriggers();
 }
 
 function applyFreeze() {

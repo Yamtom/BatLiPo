@@ -1,5 +1,6 @@
 /** Налаштування і константи */
 const CFG_SHEET = 'GCAL_CONFIG';
+const DEFAULT_CALENDAR_ID = 'BatLiPo60@gmail.com';
 const NOTE_PREFIX = '[GCAL]';
 const BASE_EPOCH = new Date('1899-12-30T00:00:00Z');
 const TZ = Session.getScriptTimeZone();
@@ -104,10 +105,15 @@ function ensureConfigSheet() {
   if (!sh) {
     sh = ss.insertSheet(CFG_SHEET);
     sh.getRange(1, 1, 1, 2).setValues([['key', 'value']]);
-    sh.getRange(2, 1, 1, 2).setValues([['calendarId', 'primary']]);
+    sh.getRange(2, 1, 1, 2).setValues([['calendarId', DEFAULT_CALENDAR_ID]]);
     sh.getRange(3, 1, 1, 2).setValues([['sheetsWhitelist', '']]);
     sh.getRange(4, 1, 1, 2).setValues([['dateColumns', '']]);
     sh.autoResizeColumns(1, 2);
+  } else {
+    ensureConfigHeader_(sh);
+    setConfigValue_(sh, 'calendarId', DEFAULT_CALENDAR_ID, true);
+    setConfigValue_(sh, 'sheetsWhitelist', '', false);
+    setConfigValue_(sh, 'dateColumns', '', false);
   }
   SpreadsheetApp.getUi().alert('Аркуш конфігурації готовий: ' + CFG_SHEET);
 }
@@ -115,14 +121,14 @@ function ensureConfigSheet() {
 function readConfig() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(CFG_SHEET);
-  let calendarId = 'primary', sheetsWhitelist = [], dateColumns = [];
+  let calendarId = DEFAULT_CALENDAR_ID, sheetsWhitelist = [], dateColumns = [];
   if (sh) {
     const obj = Object.fromEntries(
       sh.getDataRange().getValues()
         .filter(r => r[0] && r[0] !== 'key')
         .map(r => [String(r[0]).trim(), String(r[1] ?? '').trim()])
     );
-    calendarId = obj.calendarId || 'primary';
+    calendarId = obj.calendarId || DEFAULT_CALENDAR_ID;
     sheetsWhitelist = (obj.sheetsWhitelist || '')
       .split(',')
       .map(s => s.trim())
@@ -133,6 +139,31 @@ function readConfig() {
       .filter(n => Number.isInteger(n) && n > 0);
   }
   return { calendarId, sheetsWhitelist, dateColumns };
+}
+
+function ensureConfigHeader_(sh) {
+  const key = String(sh.getRange(1, 1).getValue() || '').trim();
+  const value = String(sh.getRange(1, 2).getValue() || '').trim();
+  if (key !== 'key' || value !== 'value') {
+    sh.getRange(1, 1, 1, 2).setValues([['key', 'value']]);
+  }
+}
+
+function setConfigValue_(sh, key, value, overwrite) {
+  const lastRow = sh.getLastRow();
+  const dataRowCount = Math.max(lastRow - 1, 0);
+  if (dataRowCount) {
+    const values = sh.getRange(2, 1, dataRowCount, 2).getValues();
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim() === key) {
+        const cell = sh.getRange(i + 2, 2);
+        const currentValue = String(cell.getValue() ?? '').trim();
+        if (overwrite || !currentValue) cell.setValue(value);
+        return;
+      }
+    }
+  }
+  sh.getRange(lastRow + 1, 1, 1, 2).setValues([[key, value]]);
 }
 
 function isSheetAllowed(name, whitelist) {

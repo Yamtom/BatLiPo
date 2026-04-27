@@ -12,6 +12,8 @@
 - `refreshAll` і `colorCells` для оновлення графіка
 - `showSidebar` для генерації SMS
 - `syncAllChunked` для синхронізації нотаток із Google Calendar
+- `createGcalEditTrigger` для перевстановлення installable `onEdit` тригера під поточним акаунтом
+- `repairTailsUi` для відновлення меню та тригерів після переносу таблиці
 
 Структура файлів:
 
@@ -93,6 +95,11 @@
 
 - `clearTriggersByFns`: видаляє тригери за назвами handler-функцій.
 - `createDailyTrigger`: перевстановлює щоденний тригер фарбування заголовків.
+- `createGcalEditTrigger`: перевстановлює installable edit-тригер GCAL Sync під поточним акаунтом.
+- `createMenuOpenTrigger`: перевстановлює installable open-тригер, який перебудовує меню при відкритті таблиці.
+- `createTailsTriggers`: перевстановлює daily, edit і open тригери.
+- `repairTailsUi`: примусово перебудовує меню і перевстановлює тригери після переносу таблиці.
+- `buildTailsMenus_`: формує меню `Скрипти` та `GCAL Sync`.
 - `onOpen`: формує меню інструментів і GCAL sync.
 - `onInstall`: ініціалізує меню і щоденний тригер при встановленні.
 - `applyFreeze`: фіксує стандартні рядки й колонки.
@@ -101,7 +108,7 @@
 
 - `onEdit`: оновлює нотатку для відредагованої клітинки дати.
 - `syncAllChunked`: синхронізує нотатки по аркушах із відновленням стану.
-- `ensureConfigSheet`: створює аркуш GCAL-конфігурації.
+- `ensureConfigSheet`: створює або оновлює аркуш GCAL-конфігурації; `calendarId` встановлюється на `BatLiPo60@gmail.com`, а `sheetsWhitelist` і `dateColumns` зберігаються.
 - `readConfig`: читає GCAL-конфіг із аркуша.
 - `isSheetAllowed`: перевіряє аркуш за whitelist.
 - `upsertNote`: записує або очищає керовану нотатку.
@@ -141,7 +148,7 @@
 Дерево викликів:
 
 1. `onOpen`
-Дочірні (через меню): `refreshAll`, `colorCells`, `refreshColorCountsActiveSheet`, `createDailyTrigger`, `showSidebar`, `applyFreeze`, `ensureConfigSheet`, `syncAllChunked`.
+Дочірні (через меню): `refreshAll`, `colorCells`, `refreshColorCountsActiveSheet`, `createDailyTrigger`, `repairTailsUi`, `showSidebar`, `applyFreeze`, `ensureConfigSheet`, `createGcalEditTrigger`, `syncAllChunked`.
 
 2. `refreshAll`
 Дочірні: `colorCells`, `refreshColorCountsActiveSheet`, `toast`, `sendErrorNotification`.
@@ -192,4 +199,5 @@
 Примітки:
 
 - Runtime, schedule core, інтеграції, валідація і UI рознесені по окремих файлах.
+- GCAL Sync за замовчуванням читає календар `BatLiPo60@gmail.com`; новий акаунт-власник тригерів має мати доступ до цього календаря.
 - Із ростом проєкту тримайте інтеграції ізольованими від core-логіки графіка.
