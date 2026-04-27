@@ -1,0 +1,17 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^powershell -NoProfile -ExecutionPolicy Bypass -File \"\\.\\\\tools\\\\convert-board-html-to-md\\.ps1\"; Get-ChildItem -LiteralPath \"m:\\\\Yamtom\\\\Desktop\\\\BatLiPo\\\\chart\\\\Особи закріплення бортів\\\\_markdown_exports\" -File \\| Select-Object -ExpandProperty Name$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    },
+    "spellright.language": [
+        "en",
+        "uk"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext"
+    ]
+}
